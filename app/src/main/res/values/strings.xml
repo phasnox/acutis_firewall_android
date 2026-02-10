@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Acutis Firewall</string>
+    <string name="vpn_notification_title">Firewall Active</string>
+    <string name="vpn_notification_text">Protecting your device from harmful content</string>
+    <string name="vpn_channel_name">Firewall Status</string>
+    <string name="vpn_channel_description">Shows when the firewall is active</string>
+    <string name="enable_firewall">Enable Firewall</string>
+    <string name="disable_firewall">Disable Firewall</string>
+    <string name="firewall_enabled">Firewall is enabled</string>
+    <string name="firewall_disabled">Firewall is disabled</string>
+    <string name="blocked_sites">Blocked Sites</string>
+    <string name="time_rules">Time Rules</string>
+    <string name="settings">Settings</string>
+    <string name="add_site">Add Site</string>
+    <string name="remove_site">Remove Site</string>
+    <string name="enter_domain">Enter domain</string>
+    <string name="pin_required">PIN Required</string>
+    <string name="enter_pin">Enter PIN</string>
+    <string name="set_pin">Set PIN</string>
+    <string name="confirm_pin">Confirm PIN</string>
+    <string name="pin_mismatch">PINs do not match</string>
+    <string name="incorrect_pin">Incorrect PIN</string>
+    <string name="pin_set_success">PIN set successfully</string>
+    <string name="enable_pin">Enable PIN Protection</string>
+    <string name="change_pin">Change PIN</string>
+    <string name="adult_content">Adult Content</string>
+    <string name="malware">Malware &amp; Phishing</string>
+    <string name="gambling">Gambling</string>
+    <string name="social_media">Social Media</string>
+    <string name="custom_blocklist">Custom Blocklist</string>
+    <string name="default_blocklists">Default Blocklists</string>
+    <string name="sites_blocked_count">%d sites blocked</string>
+    <string name="add_time_rule">Add Time Rule</string>
+    <string name="daily_limit">Daily Limit</string>
+    <string name="schedule">Schedule</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="home">Home</string>
+</resources>
