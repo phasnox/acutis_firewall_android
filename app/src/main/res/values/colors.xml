@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher icon background -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+
+    <!-- App theme colors -->
+    <color name="acutis_navy">#2C3E50</color>
+    <color name="acutis_navy_dark">#1A252F</color>
+</resources>

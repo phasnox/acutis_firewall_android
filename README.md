@@ -1,5 +1,18 @@
 # Acutis Firewall
 
+<p align="center">
+  <img src="assets/acutis_logo.png" alt="Acutis Firewall Logo" width="200"/>
+</p>
+
+<p align="center">
+  <a href="https://github.com/phasnox/acutis_firewall_android/actions/workflows/android-ci.yml">
+    <img src="https://github.com/phasnox/acutis_firewall_android/actions/workflows/android-ci.yml/badge.svg" alt="Build Status"/>
+  </a>
+  <img src="https://img.shields.io/badge/Android-10%2B-brightgreen" alt="Android 10+"/>
+  <img src="https://img.shields.io/badge/Kotlin-1.9-purple" alt="Kotlin"/>
+  <img src="https://img.shields.io/badge/License-MIT-blue" alt="License"/>
+</p>
+
 A parental control Android app that blocks adult and dangerous content using a local VPN-based DNS filter. Parents can protect settings with a PIN, manage custom blocklists, and set time-based access rules.
 
 ## Features
@@ -63,8 +76,8 @@ A parental control Android app that blocks adult and dangerous content using a l
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/acutis_firewall.git
-cd acutis_firewall
+git clone https://github.com/phasnox/acutis_firewall_android.git
+cd acutis_firewall_android
 
 # Build debug APK
 ./gradlew assembleDebug
