@@ -142,7 +142,7 @@ class HomeViewModel @Inject constructor(
 
         try {
             // Download adult content list
-            _uiState.value = _uiState.value.copy(updateStatus = "Downloading adult content filter...")
+            _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for adult content...")
             val adultResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT)
             if (adultResult.success) {
                 totalDomains += adultResult.domainsAdded
@@ -150,7 +150,7 @@ class HomeViewModel @Inject constructor(
             }
 
             // Download malware list
-            _uiState.value = _uiState.value.copy(updateStatus = "Downloading malware filter...")
+            _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for malware...")
             val malwareResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE)
             if (malwareResult.success) {
                 totalDomains += malwareResult.domainsAdded
@@ -158,7 +158,7 @@ class HomeViewModel @Inject constructor(
             }
 
             // Download gambling list
-            _uiState.value = _uiState.value.copy(updateStatus = "Downloading gambling filter...")
+            _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for gambling...")
             val gamblingResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING)
             if (gamblingResult.success) {
                 totalDomains += gamblingResult.domainsAdded
