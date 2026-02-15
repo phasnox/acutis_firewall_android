@@ -39,8 +39,10 @@ class HomeViewModelTest {
 
         every { settingsDataStore.firewallEnabled } returns flowOf(false)
         every { settingsDataStore.pinEnabled } returns flowOf(false)
+        every { settingsDataStore.lockdownModeDetected } returns flowOf(false)
         every { blocklistRepository.getEnabledCount() } returns flowOf(100)
         every { settingsDataStore.hasPin() } returns false
+        coEvery { settingsDataStore.setLockdownModeDetected(any()) } just Runs
     }
 
     @After
@@ -238,6 +240,105 @@ class HomeViewModelTest {
         viewModel.uiState.test {
             val state = awaitItem()
             assertThat(state.showUpdateResult).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `lockdown mode detected shows warning in UI state`() = runTest {
+        // Given
+        every { settingsDataStore.lockdownModeDetected } returns flowOf(true)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.showLockdownWarning).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `lockdown mode not detected hides warning in UI state`() = runTest {
+        // Given
+        every { settingsDataStore.lockdownModeDetected } returns flowOf(false)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.showLockdownWarning).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `dismissLockdownWarning calls setLockdownModeDetected with false`() = runTest {
+        // Given
+        every { settingsDataStore.lockdownModeDetected } returns flowOf(true)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.dismissLockdownWarning()
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsDataStore.setLockdownModeDetected(false) }
+    }
+
+    @Test
+    fun `showVpnConflictAlert sets showVpnConflictAlert to true`() = runTest {
+        // Given
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.showVpnConflictAlert()
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.showVpnConflictAlert).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `dismissVpnConflictAlert sets showVpnConflictAlert to false`() = runTest {
+        // Given
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.showVpnConflictAlert()
+        advanceUntilIdle()
+
+        // When
+        viewModel.dismissVpnConflictAlert()
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.showVpnConflictAlert).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `initial state has showLockdownWarning as false by default`() = runTest {
+        // Given
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.showLockdownWarning).isFalse()
+            assertThat(state.showVpnConflictAlert).isFalse()
             cancelAndIgnoreRemainingEvents()
         }
     }
