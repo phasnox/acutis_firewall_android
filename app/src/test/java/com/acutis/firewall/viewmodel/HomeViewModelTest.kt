@@ -12,6 +12,7 @@ import com.acutis.firewall.ui.screens.home.PendingAction
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After
@@ -373,5 +374,106 @@ class HomeViewModelTest {
         // Then
         coVerify(exactly = 0) { timeRuleRepository.addRule(any()) }
         coVerify(exactly = 0) { settingsDataStore.setDefaultTimeRulesCreated(any()) }
+    }
+
+    @Test
+    fun `isTogglingFirewall starts as false`() = runTest {
+        // Given
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.isTogglingFirewall).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `isTogglingFirewall is set to true when toggling firewall`() = runTest {
+        // Given - firewall is off, no PIN required
+        every { settingsDataStore.firewallEnabled } returns flowOf(false)
+        every { settingsDataStore.pinEnabled } returns flowOf(false)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.onToggleFirewall()
+
+        // Then - should be toggling (before state actually changes)
+        assertThat(viewModel.uiState.value.isTogglingFirewall).isTrue()
+    }
+
+    @Test
+    fun `isTogglingFirewall is cleared when firewall state changes`() = runTest {
+        // Given - use MutableStateFlow to simulate state changes
+        val firewallEnabledFlow = MutableStateFlow(false)
+        every { settingsDataStore.firewallEnabled } returns firewallEnabledFlow
+        every { settingsDataStore.pinEnabled } returns flowOf(false)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When - toggle firewall
+        viewModel.onToggleFirewall()
+        assertThat(viewModel.uiState.value.isTogglingFirewall).isTrue()
+
+        // Simulate firewall becoming enabled
+        firewallEnabledFlow.value = true
+        advanceUntilIdle()
+
+        // Then - toggling should be cleared
+        assertThat(viewModel.uiState.value.isTogglingFirewall).isFalse()
+        assertThat(viewModel.uiState.value.isFirewallEnabled).isTrue()
+    }
+
+    @Test
+    fun `isTogglingFirewall is set after PIN verification when disabling`() = runTest {
+        // Given - firewall is on, PIN is required
+        every { settingsDataStore.firewallEnabled } returns flowOf(true)
+        every { settingsDataStore.pinEnabled } returns flowOf(true)
+        every { settingsDataStore.hasPin() } returns true
+        every { settingsDataStore.verifyPin("1234") } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When - toggle (should show PIN dialog first)
+        viewModel.onToggleFirewall()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.showPinDialog).isTrue()
+        assertThat(viewModel.uiState.value.isTogglingFirewall).isFalse()
+
+        // Enter correct PIN
+        viewModel.onPinEntered("1234")
+        advanceUntilIdle()
+
+        // Then - should now be toggling
+        assertThat(viewModel.uiState.value.showPinDialog).isFalse()
+        assertThat(viewModel.uiState.value.isTogglingFirewall).isTrue()
+    }
+
+    @Test
+    fun `isTogglingFirewall is cleared when disabling completes`() = runTest {
+        // Given - use MutableStateFlow to simulate state changes
+        val firewallEnabledFlow = MutableStateFlow(true)
+        every { settingsDataStore.firewallEnabled } returns firewallEnabledFlow
+        every { settingsDataStore.pinEnabled } returns flowOf(false)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Verify initial state
+        assertThat(viewModel.uiState.value.isFirewallEnabled).isTrue()
+
+        // When - toggle firewall to disable
+        viewModel.onToggleFirewall()
+        assertThat(viewModel.uiState.value.isTogglingFirewall).isTrue()
+
+        // Simulate firewall becoming disabled
+        firewallEnabledFlow.value = false
+        advanceUntilIdle()
+
+        // Then - toggling should be cleared
+        assertThat(viewModel.uiState.value.isTogglingFirewall).isFalse()
+        assertThat(viewModel.uiState.value.isFirewallEnabled).isFalse()
     }
 }

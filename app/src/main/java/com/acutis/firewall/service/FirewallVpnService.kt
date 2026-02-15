@@ -418,7 +418,8 @@ class FirewallVpnService : VpnService() {
     private fun stopVpn() {
         Log.d(TAG, "Stopping VPN")
         isRunning = false
-        serviceScope.launch {
+        // Use runBlocking to ensure DataStore writes complete before stopping service
+        runBlocking {
             settingsDataStore.setFirewallEnabled(false)
             settingsDataStore.setLockdownModeDetected(false)
         }

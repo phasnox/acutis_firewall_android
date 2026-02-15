@@ -31,7 +31,8 @@ data class HomeUiState(
     val showUpdateResult: Boolean = false,
     val updateResultMessage: String = "",
     val showVpnConflictAlert: Boolean = false,
-    val showLockdownWarning: Boolean = false
+    val showLockdownWarning: Boolean = false,
+    val isTogglingFirewall: Boolean = false
 )
 
 enum class PendingAction {
@@ -58,11 +59,13 @@ class HomeViewModel @Inject constructor(
                 blocklistRepository.getEnabledCount(),
                 settingsDataStore.lockdownModeDetected
             ) { firewallEnabled, pinEnabled, blockedCount, lockdownDetected ->
+                // Clear toggling state when firewall state changes
                 _uiState.value.copy(
                     isFirewallEnabled = firewallEnabled,
                     isPinEnabled = pinEnabled,
                     blockedSitesCount = blockedCount,
-                    showLockdownWarning = lockdownDetected
+                    showLockdownWarning = lockdownDetected,
+                    isTogglingFirewall = false
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -138,6 +141,8 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun toggleFirewallInternal() {
+        _uiState.value = _uiState.value.copy(isTogglingFirewall = true)
+
         val context = application.applicationContext
         val intent = Intent(context, FirewallVpnService::class.java)
 

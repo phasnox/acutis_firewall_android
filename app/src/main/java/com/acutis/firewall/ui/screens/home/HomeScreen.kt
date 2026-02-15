@@ -168,7 +168,11 @@ fun HomeScreen(
             // Main shield toggle
             ShieldToggle(
                 isEnabled = uiState.isFirewallEnabled,
+                isToggling = uiState.isTogglingFirewall,
                 onClick = {
+                    // Don't allow clicks while toggling
+                    if (uiState.isTogglingFirewall) return@ShieldToggle
+
                     // Only check for VPN conflict when enabling (not disabling)
                     if (!uiState.isFirewallEnabled && viewModel.isOtherVpnActive()) {
                         viewModel.showVpnConflictAlert()
@@ -186,17 +190,36 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Status text
-            Text(
-                text = if (uiState.isFirewallEnabled) {
-                    stringResource(R.string.firewall_enabled)
-                } else {
-                    stringResource(R.string.firewall_disabled)
-                },
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (uiState.isFirewallEnabled) FirewallColors.enabled else FirewallColors.disabled
-            )
+            // Status text with loading indicator
+            if (uiState.isTogglingFirewall) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (uiState.isFirewallEnabled) "Deactivating..." else "Activating...",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Text(
+                    text = if (uiState.isFirewallEnabled) {
+                        stringResource(R.string.firewall_enabled)
+                    } else {
+                        stringResource(R.string.firewall_disabled)
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (uiState.isFirewallEnabled) FirewallColors.enabled else FirewallColors.disabled
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -248,12 +271,14 @@ fun HomeScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             // Footer info
-            Text(
-                text = "Tap the shield to ${if (uiState.isFirewallEnabled) "disable" else "enable"} protection",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+            if (!uiState.isTogglingFirewall) {
+                Text(
+                    text = "Tap the shield to ${if (uiState.isFirewallEnabled) "disable" else "enable"} protection",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -261,6 +286,7 @@ fun HomeScreen(
 @Composable
 private fun ShieldToggle(
     isEnabled: Boolean,
+    isToggling: Boolean = false,
     onClick: () -> Unit
 ) {
     val backgroundColor by animateColorAsState(
@@ -272,7 +298,11 @@ private fun ShieldToggle(
         label = "scale"
     )
     val alpha by animateFloatAsState(
-        targetValue = if (isEnabled) 1f else 0.5f,
+        targetValue = when {
+            isToggling -> 0.3f
+            isEnabled -> 1f
+            else -> 0.5f
+        },
         label = "alpha"
     )
 
@@ -284,6 +314,7 @@ private fun ShieldToggle(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = !isToggling,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
