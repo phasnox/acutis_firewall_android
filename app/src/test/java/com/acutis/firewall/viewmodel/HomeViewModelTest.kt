@@ -3,8 +3,10 @@ package com.acutis.firewall.viewmodel
 import android.app.Application
 import app.cash.turbine.test
 import com.acutis.firewall.blocklist.BlocklistDownloader
+import com.acutis.firewall.data.db.entities.TimeRule
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.data.repository.BlocklistRepository
+import com.acutis.firewall.data.repository.TimeRuleRepository
 import com.acutis.firewall.ui.screens.home.HomeViewModel
 import com.acutis.firewall.ui.screens.home.PendingAction
 import io.mockk.*
@@ -24,6 +26,7 @@ class HomeViewModelTest {
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var blocklistRepository: BlocklistRepository
     private lateinit var blocklistDownloader: BlocklistDownloader
+    private lateinit var timeRuleRepository: TimeRuleRepository
     private lateinit var viewModel: HomeViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -36,6 +39,7 @@ class HomeViewModelTest {
         settingsDataStore = mockk(relaxed = true)
         blocklistRepository = mockk(relaxed = true)
         blocklistDownloader = mockk(relaxed = true)
+        timeRuleRepository = mockk(relaxed = true)
 
         every { settingsDataStore.firewallEnabled } returns flowOf(false)
         every { settingsDataStore.pinEnabled } returns flowOf(false)
@@ -43,6 +47,10 @@ class HomeViewModelTest {
         every { blocklistRepository.getEnabledCount() } returns flowOf(100)
         every { settingsDataStore.hasPin() } returns false
         coEvery { settingsDataStore.setLockdownModeDetected(any()) } just Runs
+        coEvery { settingsDataStore.areDefaultTimeRulesCreated() } returns true
+        coEvery { settingsDataStore.setDefaultTimeRulesCreated(any()) } just Runs
+        coEvery { timeRuleRepository.addRule(any()) } returns 1L
+        every { timeRuleRepository.createDailyLimitRule(any(), any(), any(), any(), any(), any()) } returns mockk()
     }
 
     @After
@@ -51,7 +59,7 @@ class HomeViewModelTest {
     }
 
     private fun createViewModel(): HomeViewModel {
-        return HomeViewModel(application, settingsDataStore, blocklistRepository, blocklistDownloader)
+        return HomeViewModel(application, settingsDataStore, blocklistRepository, blocklistDownloader, timeRuleRepository)
     }
 
     @Test
@@ -341,5 +349,29 @@ class HomeViewModelTest {
             assertThat(state.showVpnConflictAlert).isFalse()
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `creates default time rules on first launch`() = runTest {
+        // Given - default time rules not yet created
+        coEvery { settingsDataStore.areDefaultTimeRulesCreated() } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        coVerify { timeRuleRepository.addRule(any()) }
+        coVerify { settingsDataStore.setDefaultTimeRulesCreated(true) }
+    }
+
+    @Test
+    fun `does not create default time rules if already created`() = runTest {
+        // Given - default time rules already created
+        coEvery { settingsDataStore.areDefaultTimeRulesCreated() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        coVerify(exactly = 0) { timeRuleRepository.addRule(any()) }
+        coVerify(exactly = 0) { settingsDataStore.setDefaultTimeRulesCreated(any()) }
     }
 }

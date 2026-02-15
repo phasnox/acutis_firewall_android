@@ -43,6 +43,7 @@ class SettingsDataStore @Inject constructor(
         private val SOCIAL_MEDIA_BLOCK_ENABLED = booleanPreferencesKey("social_media_block_enabled")
         private val AUTO_START_ENABLED = booleanPreferencesKey("auto_start_enabled")
         private val LOCKDOWN_MODE_DETECTED = booleanPreferencesKey("lockdown_mode_detected")
+        private val DEFAULT_TIME_RULES_CREATED = booleanPreferencesKey("default_time_rules_created")
         private const val PIN_HASH_KEY = "pin_hash"
     }
 
@@ -125,6 +126,16 @@ class SettingsDataStore @Inject constructor(
     suspend fun setLockdownModeDetected(detected: Boolean) {
         dataStore.edit { prefs ->
             prefs[LOCKDOWN_MODE_DETECTED] = detected
+        }
+    }
+
+    suspend fun areDefaultTimeRulesCreated(): Boolean {
+        return dataStore.data.first()[DEFAULT_TIME_RULES_CREATED] ?: false
+    }
+
+    suspend fun setDefaultTimeRulesCreated(created: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[DEFAULT_TIME_RULES_CREATED] = created
         }
     }
 

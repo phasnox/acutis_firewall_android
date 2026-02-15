@@ -9,8 +9,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
+import com.acutis.firewall.data.db.entities.TimeRuleAction
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.data.repository.BlocklistRepository
+import com.acutis.firewall.data.repository.TimeRuleRepository
 import com.acutis.firewall.service.FirewallVpnService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -41,7 +43,8 @@ class HomeViewModel @Inject constructor(
     private val application: Application,
     private val settingsDataStore: SettingsDataStore,
     private val blocklistRepository: BlocklistRepository,
-    private val blocklistDownloader: BlocklistDownloader
+    private val blocklistDownloader: BlocklistDownloader,
+    private val timeRuleRepository: TimeRuleRepository
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -74,6 +77,27 @@ class HomeViewModel @Inject constructor(
                 downloadBlocklistsInternal(isInitialDownload = true)
             }
         }
+
+        // Create default time rules on first launch
+        viewModelScope.launch {
+            if (!settingsDataStore.areDefaultTimeRulesCreated()) {
+                createDefaultTimeRules()
+                settingsDataStore.setDefaultTimeRulesCreated(true)
+            }
+        }
+    }
+
+    private suspend fun createDefaultTimeRules() {
+        // Create a default rule: Allow social media for 30 minutes per day
+        val socialMediaRule = timeRuleRepository.createDailyLimitRule(
+            domain = null,
+            category = BlockCategory.SOCIAL_MEDIA,
+            customListId = null,
+            action = TimeRuleAction.ALLOW,
+            limitMinutes = 30,
+            daysOfWeek = listOf(1, 2, 3, 4, 5, 6, 7) // All days
+        )
+        timeRuleRepository.addRule(socialMediaRule)
     }
 
     fun onToggleFirewall() {
