@@ -2,6 +2,8 @@ package com.acutis.firewall.ui.screens.home
 
 import android.app.Application
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,7 +27,9 @@ data class HomeUiState(
     val isUpdatingBlocklists: Boolean = false,
     val updateStatus: String = "",
     val showUpdateResult: Boolean = false,
-    val updateResultMessage: String = ""
+    val updateResultMessage: String = "",
+    val showVpnConflictAlert: Boolean = false,
+    val showLockdownWarning: Boolean = false
 )
 
 enum class PendingAction {
@@ -48,12 +52,14 @@ class HomeViewModel @Inject constructor(
             combine(
                 settingsDataStore.firewallEnabled,
                 settingsDataStore.pinEnabled,
-                blocklistRepository.getEnabledCount()
-            ) { firewallEnabled, pinEnabled, blockedCount ->
+                blocklistRepository.getEnabledCount(),
+                settingsDataStore.lockdownModeDetected
+            ) { firewallEnabled, pinEnabled, blockedCount, lockdownDetected ->
                 _uiState.value.copy(
                     isFirewallEnabled = firewallEnabled,
                     isPinEnabled = pinEnabled,
-                    blockedSitesCount = blockedCount
+                    blockedSitesCount = blockedCount,
+                    showLockdownWarning = lockdownDetected
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -122,6 +128,27 @@ class HomeViewModel @Inject constructor(
 
     fun checkVpnPermission(): Intent? {
         return VpnService.prepare(application.applicationContext)
+    }
+
+    fun isOtherVpnActive(): Boolean {
+        val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
+        val activeNetwork = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+    }
+
+    fun showVpnConflictAlert() {
+        _uiState.value = _uiState.value.copy(showVpnConflictAlert = true)
+    }
+
+    fun dismissVpnConflictAlert() {
+        _uiState.value = _uiState.value.copy(showVpnConflictAlert = false)
+    }
+
+    fun dismissLockdownWarning() {
+        viewModelScope.launch {
+            settingsDataStore.setLockdownModeDetected(false)
+        }
     }
 
     fun updateBlocklists() {

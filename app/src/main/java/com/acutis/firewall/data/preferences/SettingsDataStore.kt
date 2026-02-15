@@ -42,6 +42,7 @@ class SettingsDataStore @Inject constructor(
         private val GAMBLING_BLOCK_ENABLED = booleanPreferencesKey("gambling_block_enabled")
         private val SOCIAL_MEDIA_BLOCK_ENABLED = booleanPreferencesKey("social_media_block_enabled")
         private val AUTO_START_ENABLED = booleanPreferencesKey("auto_start_enabled")
+        private val LOCKDOWN_MODE_DETECTED = booleanPreferencesKey("lockdown_mode_detected")
         private const val PIN_HASH_KEY = "pin_hash"
     }
 
@@ -71,6 +72,10 @@ class SettingsDataStore @Inject constructor(
 
     val autoStartEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[AUTO_START_ENABLED] ?: true
+    }
+
+    val lockdownModeDetected: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[LOCKDOWN_MODE_DETECTED] ?: false
     }
 
     suspend fun isFirewallEnabled(): Boolean = firewallEnabled.first()
@@ -114,6 +119,12 @@ class SettingsDataStore @Inject constructor(
     suspend fun setAutoStartEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[AUTO_START_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setLockdownModeDetected(detected: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[LOCKDOWN_MODE_DETECTED] = detected
         }
     }
 

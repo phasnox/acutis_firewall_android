@@ -1,6 +1,8 @@
 package com.acutis.firewall.ui.screens.home
 
 import android.app.Activity
+import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -20,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +67,49 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(onClick = viewModel::dismissUpdateResult) {
                     Text("OK")
+                }
+            }
+        )
+    }
+
+    if (uiState.showVpnConflictAlert) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissVpnConflictAlert,
+            title = { Text("VPN Conflict") },
+            text = { Text("Another VPN is currently active. Please disable the other VPN before enabling Acutis Firewall.") },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissVpnConflictAlert) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (uiState.showLockdownWarning) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = viewModel::dismissLockdownWarning,
+            title = { Text("VPN Lockdown Mode Detected") },
+            text = {
+                Text(
+                    "\"Block connections without VPN\" is enabled in your device settings. " +
+                    "Acutis Firewall only filters DNS traffic, so other connections may be blocked.\n\n" +
+                    "Disable \"Block connections without VPN\" in VPN settings to fix this."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
+                        viewModel.dismissLockdownWarning()
+                    }
+                ) {
+                    Text("Open VPN Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissLockdownWarning) {
+                    Text("Dismiss")
                 }
             }
         )
@@ -123,6 +169,12 @@ fun HomeScreen(
             ShieldToggle(
                 isEnabled = uiState.isFirewallEnabled,
                 onClick = {
+                    // Only check for VPN conflict when enabling (not disabling)
+                    if (!uiState.isFirewallEnabled && viewModel.isOtherVpnActive()) {
+                        viewModel.showVpnConflictAlert()
+                        return@ShieldToggle
+                    }
+
                     val intent = viewModel.checkVpnPermission()
                     if (intent != null) {
                         vpnPermissionLauncher.launch(intent)

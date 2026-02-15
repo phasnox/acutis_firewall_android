@@ -22,7 +22,6 @@ import java.io.FileOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import javax.inject.Inject
 
@@ -49,7 +48,9 @@ class FirewallVpnService : VpnService() {
         const val ACTION_STOP = "com.acutis.firewall.STOP_VPN"
         const val ACTION_REFRESH_BLOCKLIST = "com.acutis.firewall.REFRESH_BLOCKLIST"
         private const val NOTIFICATION_ID = 1
+        private const val LOCKDOWN_WARNING_NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "firewall_channel"
+        private const val WARNING_CHANNEL_ID = "firewall_warning_channel"
         private const val VPN_ADDRESS = "10.0.0.2"
         private const val MTU = 1500
         private const val DNS_PORT = 53
@@ -63,6 +64,7 @@ class FirewallVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        createWarningNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -99,9 +101,8 @@ class FirewallVpnService : VpnService() {
                     .addAddress(VPN_ADDRESS, 24)
                     // Set DNS server that apps will use - we'll intercept queries to this
                     .addDnsServer(INTERCEPT_DNS)
-                    // Route only the DNS server IP through VPN
+                    // Route only DNS server IPs through VPN
                     .addRoute(INTERCEPT_DNS, 32)
-                    // Also route secondary Google DNS
                     .addRoute("8.8.4.4", 32)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -115,6 +116,10 @@ class FirewallVpnService : VpnService() {
                     startForeground(NOTIFICATION_ID, createNotification())
                     settingsDataStore.setFirewallEnabled(true)
                     Log.d(TAG, "VPN established successfully")
+
+                    // Check if lockdown mode is enabled and warn user
+                    checkLockdownMode()
+
                     runVpnLoop()
                 } else {
                     Log.e(TAG, "Failed to establish VPN")
@@ -159,7 +164,7 @@ class FirewallVpnService : VpnService() {
         }
     }
 
-    private suspend fun handlePacket(packetData: ByteArray, outputStream: FileOutputStream) {
+    private fun handlePacket(packetData: ByteArray, outputStream: FileOutputStream) {
         // Need at least IP header
         if (packetData.size < 20) return
 
@@ -169,17 +174,17 @@ class FirewallVpnService : VpnService() {
         val headerLength = (packetData[0].toInt() and 0x0F) * 4
         val protocol = packetData[9].toInt() and 0xFF
 
-        // We only handle UDP DNS
-        if (protocol != 17) return // Not UDP
+        // We only handle UDP (protocol 17)
+        if (protocol != 17) return
         if (packetData.size < headerLength + 8) return
-
-        val destPort = ((packetData[headerLength + 2].toInt() and 0xFF) shl 8) or
-                      (packetData[headerLength + 3].toInt() and 0xFF)
-
-        if (destPort != DNS_PORT) return // Not DNS
 
         val sourcePort = ((packetData[headerLength].toInt() and 0xFF) shl 8) or
                         (packetData[headerLength + 1].toInt() and 0xFF)
+        val destPort = ((packetData[headerLength + 2].toInt() and 0xFF) shl 8) or
+                      (packetData[headerLength + 3].toInt() and 0xFF)
+
+        // Only handle DNS (port 53)
+        if (destPort != DNS_PORT) return
 
         val udpLength = ((packetData[headerLength + 4].toInt() and 0xFF) shl 8) or
                        (packetData[headerLength + 5].toInt() and 0xFF)
@@ -192,26 +197,18 @@ class FirewallVpnService : VpnService() {
         val sourceIp = packetData.copyOfRange(12, 16)
         val destIp = packetData.copyOfRange(16, 20)
 
-        // Handle the DNS query
-        val dnsResponse = processDnsQuery(dnsPayload)
-
-        if (dnsResponse != null) {
-            // Build and send response
-            val responsePacket = buildUdpResponsePacket(
-                sourceIp = destIp,  // Swap for response
-                destIp = sourceIp,
-                sourcePort = DNS_PORT,
-                destPort = sourcePort,
-                payload = dnsResponse
-            )
-
-            withContext(Dispatchers.IO) {
-                try {
-                    outputStream.write(responsePacket)
-                    outputStream.flush()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error writing response", e)
-                }
+        // Handle DNS query async
+        serviceScope.launch(Dispatchers.IO) {
+            val dnsResponse = processDnsQuery(dnsPayload)
+            if (dnsResponse != null) {
+                val responsePacket = buildUdpResponsePacket(
+                    sourceIp = destIp,
+                    destIp = sourceIp,
+                    sourcePort = DNS_PORT,
+                    destPort = sourcePort,
+                    payload = dnsResponse
+                )
+                writePacket(outputStream, responsePacket)
             }
         }
     }
@@ -407,11 +404,23 @@ class FirewallVpnService : VpnService() {
         return data
     }
 
+    private suspend fun writePacket(outputStream: FileOutputStream, packet: ByteArray) {
+        withContext(Dispatchers.IO) {
+            try {
+                outputStream.write(packet)
+                outputStream.flush()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error writing packet", e)
+            }
+        }
+    }
+
     private fun stopVpn() {
         Log.d(TAG, "Stopping VPN")
         isRunning = false
         serviceScope.launch {
             settingsDataStore.setFirewallEnabled(false)
+            settingsDataStore.setLockdownModeDetected(false)
         }
         vpnInterface?.close()
         vpnInterface = null
@@ -436,6 +445,69 @@ class FirewallVpnService : VpnService() {
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+    }
+
+    private fun createWarningNotificationChannel() {
+        Log.d(TAG, "Creating warning notification channel")
+        val channel = NotificationChannel(
+            WARNING_CHANNEL_ID,
+            "Firewall Warnings",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Important warnings about firewall configuration"
+        }
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+    }
+
+    private fun checkLockdownMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val lockdownEnabled = isLockdownEnabled
+            val alwaysOn = isAlwaysOn
+            Log.d(TAG, "VPN status - isAlwaysOn: $alwaysOn, isLockdownEnabled: $lockdownEnabled")
+            if (lockdownEnabled) {
+                Log.w(TAG, "VPN lockdown mode is enabled - internet may not work properly")
+                // Save to DataStore so UI can show a dialog
+                serviceScope.launch {
+                    settingsDataStore.setLockdownModeDetected(true)
+                }
+                showLockdownWarning()
+            } else {
+                // Clear the lockdown flag if not in lockdown mode
+                serviceScope.launch {
+                    settingsDataStore.setLockdownModeDetected(false)
+                }
+            }
+        } else {
+            Log.d(TAG, "Lockdown check skipped - requires API 29+, current: ${Build.VERSION.SDK_INT}")
+        }
+    }
+
+    private fun showLockdownWarning() {
+        Log.d(TAG, "Showing lockdown warning notification")
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_VPN_SETTINGS)
+            val pendingIntent = PendingIntent.getActivity(
+                this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notification = NotificationCompat.Builder(this, WARNING_CHANNEL_ID)
+                .setContentTitle("VPN Lockdown Mode Detected")
+                .setContentText("\"Block connections without VPN\" is enabled. This may cause internet issues.")
+                .setStyle(NotificationCompat.BigTextStyle()
+                    .bigText("\"Block connections without VPN\" is enabled in your device settings. Acutis Firewall only filters DNS traffic, so other connections may be blocked. Tap to open VPN settings and disable this option."))
+                .setSmallIcon(R.drawable.ic_shield)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+
+            getSystemService(NotificationManager::class.java)
+                .notify(LOCKDOWN_WARNING_NOTIFICATION_ID, notification)
+            Log.d(TAG, "Lockdown warning notification sent")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show lockdown warning", e)
+        }
     }
 
     private fun createNotification(): Notification {
