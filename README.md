@@ -45,6 +45,19 @@ A parental control Android app that blocks adult and dangerous content using a l
 - PIN required to disable blocking or modify settings
 - Enabling protections does not require PIN (only disabling)
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/main.jpg" width="200" alt="Main Screen"/>
+  <img src="assets/blocked_screen.jpg" width="200" alt="Blocked Sites"/>
+  <img src="assets/time_rules.jpg" width="200" alt="Time Rules"/>
+  <img src="assets/settings.jpg" width="200" alt="Settings"/>
+</p>
+
+| Main Screen | Blocked Sites | Time Rules | Settings |
+|:-----------:|:-------------:|:----------:|:--------:|
+| Toggle protection on/off | Manage blocklist categories | Create time-based rules | Configure app settings |
+
 ## Technical Details
 
 ### Architecture
@@ -89,51 +102,8 @@ cd acutis_firewall_android
 ./gradlew lintDebug
 ```
 
-### Project Structure
-
-```
-app/src/main/java/com/acutis/firewall/
-├── AcutisFirewallApp.kt          # Application class
-├── MainActivity.kt                # Single activity
-├── data/
-│   ├── db/
-│   │   ├── AppDatabase.kt        # Room database
-│   │   ├── BlockedSiteDao.kt     # Blocked sites DAO
-│   │   ├── TimeRuleDao.kt        # Time rules DAO
-│   │   ├── CustomBlocklistDao.kt # Custom lists DAO
-│   │   └── entities/             # Database entities
-│   ├── preferences/
-│   │   └── SettingsDataStore.kt  # Encrypted preferences
-│   └── repository/
-│       ├── BlocklistRepository.kt
-│       ├── CustomBlocklistRepository.kt
-│       └── TimeRuleRepository.kt
-├── di/
-│   └── AppModule.kt              # Hilt modules
-├── service/
-│   ├── FirewallVpnService.kt     # VPN service
-│   └── BootReceiver.kt           # Auto-start on boot
-├── blocklist/
-│   ├── BlocklistDownloader.kt    # Download blocklists
-│   └── DefaultBlocklists.kt      # Built-in lists
-├── ui/
-│   ├── navigation/
-│   │   └── NavGraph.kt
-│   ├── screens/
-│   │   ├── home/                 # Main toggle screen
-│   │   ├── blocklist/            # Manage blocked sites
-│   │   ├── timerules/            # Time-based rules
-│   │   ├── settings/             # App settings
-│   │   └── pin/                  # PIN entry/setup
-│   ├── components/               # Reusable UI components
-│   └── theme/                    # Material 3 theme
-└── worker/
-    └── TimeRuleWorker.kt         # Background time rule checks
-```
 
 ## Testing
-
-The project includes comprehensive unit tests:
 
 ```bash
 # Run all unit tests
@@ -142,24 +112,6 @@ The project includes comprehensive unit tests:
 # Run specific test class
 ./gradlew testDebugUnitTest --tests "com.acutis.firewall.viewmodel.HomeViewModelTest"
 ```
-
-### Test Coverage
-
-| Category | Tests | Description |
-|----------|-------|-------------|
-| Repository | 44 | Database operations, domain normalization |
-| ViewModel | 79 | UI state management, PIN protection |
-| Domain Logic | 31 | DNS blocking, blocklist parsing |
-| **Total** | **154** | |
-
-## CI/CD
-
-GitHub Actions runs on every push and pull request:
-- **Unit Tests** - All 154 tests must pass
-- **Lint** - Code quality checks
-- **Build** - APK compilation
-
-PRs cannot be merged if any check fails.
 
 ## Permissions
 
@@ -180,13 +132,3 @@ PRs cannot be merged if any check fails.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-All PRs must pass CI checks before merging.
