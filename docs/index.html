@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acutis Firewall - Parental Control App for Android</title>
+    <meta name="description" content="Protect your family with Acutis Firewall. Block adult content, malware, and set screen time limits. All filtering happens on your device for maximum privacy.">
+    <link rel="icon" type="image/png" href="images/icon.png">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --light: #ecf0f1;
+            --dark: #1a252f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: var(--primary);
+            background: #fff;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .logo img {
+            height: 40px;
+            width: 40px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 25px;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+
+        nav a:hover {
+            opacity: 1;
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: white;
+            padding: 140px 0 80px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .hero-image {
+            max-width: 280px;
+            margin: 40px auto 0;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--success);
+            color: white;
+            padding: 15px 35px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        /* Features */
+        .features {
+            padding: 80px 0;
+            background: var(--light);
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 50px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .feature-card p {
+            color: #666;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        /* Screenshots */
+        .screenshots {
+            padding: 80px 0;
+        }
+
+        .screenshots h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 50px;
+        }
+
+        .screenshot-grid {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .screenshot-grid img {
+            height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        /* Privacy */
+        .privacy-section {
+            padding: 80px 0;
+            background: var(--primary);
+            color: white;
+            text-align: center;
+        }
+
+        .privacy-section h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .privacy-section p {
+            max-width: 600px;
+            margin: 0 auto 30px;
+            opacity: 0.9;
+        }
+
+        .privacy-points {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .privacy-point {
+            text-align: center;
+        }
+
+        .privacy-point .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-links {
+            margin-bottom: 20px;
+        }
+
+        .footer-links a {
+            margin: 0 15px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .screenshot-grid img {
+                height: 300px;
+            }
+
+            .privacy-points {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">
+                <img src="images/icon.png" alt="Acutis Firewall">
+                <span>Acutis Firewall</span>
+            </div>
+            <div>
+                <a href="#features">Features</a>
+                <a href="#screenshots">Screenshots</a>
+                <a href="privacy-policy.html">Privacy Policy</a>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Protect Your Family Online</h1>
+            <p>Block adult content, malware, and dangerous sites. Set screen time limits. All filtering happens on your device for maximum privacy.</p>
+            <a href="https://play.google.com/store/apps/details?id=com.acutis.firewall" class="btn">Get it on Google Play</a>
+            <br>
+            <img src="images/main.jpg" alt="Acutis Firewall App" class="hero-image">
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Content Protection</h3>
+                    <p>Block adult content, malware, phishing sites, gambling, and social media. Works across all apps, not just browsers.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⏰</div>
+                    <h3>Time Controls</h3>
+                    <p>Set daily screen time limits and schedule blocking during homework, bedtime, or family hours.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>PIN Protection</h3>
+                    <p>Secure settings with a PIN so children cannot disable protection or change configurations.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3>Privacy First</h3>
+                    <p>All filtering happens locally on your device. No data collection, no external servers, no tracking.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Easy to Use</h3>
+                    <p>One-tap activation with no configuration required. Auto-starts when device boots.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Completely Free</h3>
+                    <p>No subscription, no ads, no in-app purchases. Full protection at no cost.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="screenshots" id="screenshots">
+        <div class="container">
+            <h2>Screenshots</h2>
+            <div class="screenshot-grid">
+                <img src="images/main.jpg" alt="Main Screen">
+                <img src="images/blocked_screen.jpg" alt="Blocked Sites">
+                <img src="images/time_rules.jpg" alt="Time Rules">
+                <img src="images/settings.jpg" alt="Settings">
+            </div>
+        </div>
+    </section>
+
+    <section class="privacy-section">
+        <div class="container">
+            <h2>Your Privacy Matters</h2>
+            <p>Unlike other parental control apps, Acutis Firewall never sends your data anywhere. Everything stays on your device.</p>
+            <div class="privacy-points">
+                <div class="privacy-point">
+                    <div class="icon">🚫</div>
+                    <div>No data collection</div>
+                </div>
+                <div class="privacy-point">
+                    <div class="icon">🏠</div>
+                    <div>Local filtering only</div>
+                </div>
+                <div class="privacy-point">
+                    <div class="icon">📊</div>
+                    <div>No analytics</div>
+                </div>
+                <div class="privacy-point">
+                    <div class="icon">🔒</div>
+                    <div>Encrypted PIN storage</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="privacy-policy.html">Privacy Policy</a>
+                <a href="mailto:acutis@castillo.sh">Contact</a>
+                <a href="https://github.com/phasnox/acutis_firewall_android">GitHub</a>
+            </div>
+            <p>Named after <a href="https://en.wikipedia.org/wiki/Carlo_Acutis" target="_blank">Blessed Carlo Acutis</a>, patron of the internet.</p>
+            <p style="margin-top: 10px; opacity: 0.7;">&copy; 2026 Acutis Firewall. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

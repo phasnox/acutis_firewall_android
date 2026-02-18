@@ -1,0 +1,69 @@
+GOOGLE PLAY STORE LISTING INFORMATION
+=====================================
+
+App Name: Acutis Firewall
+Developer Name: [Your developer name]
+Package Name: com.acutis.firewall
+Category: Parenting (or Tools)
+Content Rating: Complete IARC questionnaire in Play Console
+
+CONTACT DETAILS (Required)
+--------------------------
+Email: acutis@castillo.sh
+Website: [Your website URL]
+Privacy Policy URL: [Host privacy_policy.html and add URL here]
+
+GRAPHIC ASSETS REQUIRED
+-----------------------
+1. App Icon: 512x512 PNG (use acutis_logo.png, may need resizing)
+2. Feature Graphic: 1024x500 PNG (needs to be created)
+3. Screenshots: At least 2 phone screenshots (provided in screenshots/ folder)
+
+SCREENSHOT DESCRIPTIONS
+-----------------------
+1. main.jpg - "Enable protection with one tap"
+2. blocked_screen.jpg - "Choose what content to block"
+3. time_rules.jpg - "Set time limits and schedules"
+4. settings.jpg - "Secure settings with PIN protection"
+
+SUGGESTED TAGS
+--------------
+- parental control
+- content blocker
+- family safety
+- screen time
+- dns filter
+- child protection
+- web filter
+- adult blocker
+
+VPN PERMISSION DECLARATION
+--------------------------
+When submitting to Play Store, you'll need to declare why VPN permission is required.
+Use this explanation:
+
+"Acutis Firewall uses the VPN permission to create a local VPN tunnel for DNS filtering.
+This allows the app to intercept DNS queries on the device and block access to dangerous
+or inappropriate domains based on user-configured blocklists. All filtering happens
+locally on the device - no traffic is routed through external servers, and no browsing
+data is collected or transmitted. The VPN is used solely for parental control and
+content filtering purposes."
+
+DATA SAFETY FORM RESPONSES
+--------------------------
+For the Play Console Data Safety section:
+
+- Does your app collect or share any user data? NO
+- Does your app collect any of the required data types? NO
+- Is all user data encrypted in transit? N/A (no data transmitted)
+- Do you provide a way for users to request data deletion? N/A (no data collected)
+
+CONTENT RATING QUESTIONNAIRE NOTES
+----------------------------------
+- Violence: None
+- Sexual Content: None (app blocks it, doesn't display it)
+- Language: None
+- Controlled Substances: None
+- User Interaction: None (no social features)
+- Location Sharing: None
+- Personal Information: None collected

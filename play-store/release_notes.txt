@@ -1,0 +1,11 @@
+What's New in Version 1.0.0
+
+Initial Release
+
+- VPN-based DNS filtering for blocking dangerous content
+- Pre-built blocklists for adult content, malware, gambling, and social media
+- Time-based rules with daily limits and scheduled blocking
+- PIN protection to secure settings from tampering
+- Auto-start on device boot
+- Works across all apps, not just browsers
+- Complete privacy - all filtering happens on your device

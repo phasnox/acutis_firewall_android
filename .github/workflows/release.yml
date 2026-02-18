@@ -28,7 +28,7 @@ jobs:
         run: ./gradlew testDebugUnitTest
 
   build:
-    name: Build Release APK
+    name: Build Release APK and Bundle
     runs-on: ubuntu-latest
     needs: test
 
@@ -65,8 +65,8 @@ jobs:
           sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/" app/build.gradle.kts
           sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION\"/" app/build.gradle.kts
 
-      - name: Build release APK
-        run: ./gradlew assembleRelease
+      - name: Build release APK and App Bundle
+        run: ./gradlew assembleRelease bundleRelease
 
       - name: Sign APK
         if: ${{ env.KEYSTORE_BASE64 != '' }}
@@ -93,6 +93,31 @@ jobs:
 
           rm keystore.jks
 
+      - name: Sign App Bundle
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+
+          # Find the unsigned AAB
+          UNSIGNED_AAB=$(find app/build/outputs/bundle/release -name "*.aab" | head -1)
+          SIGNED_AAB="app/build/outputs/bundle/release/acutis-firewall-${{ steps.version.outputs.VERSION }}-signed.aab"
+
+          # Sign the AAB using jarsigner (required for bundles)
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore keystore.jks \
+            -storepass $KEYSTORE_PASSWORD \
+            -keypass $KEY_PASSWORD \
+            -signedjar $SIGNED_AAB \
+            $UNSIGNED_AAB \
+            $KEY_ALIAS
+
+          rm keystore.jks
+
       - name: Rename unsigned APK
         if: ${{ env.KEYSTORE_BASE64 == '' }}
         env:
@@ -101,11 +126,25 @@ jobs:
           UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
           mv "$UNSIGNED_APK" "app/build/outputs/apk/release/acutis-firewall-${{ steps.version.outputs.VERSION }}.apk"
 
+      - name: Rename unsigned AAB
+        if: ${{ env.KEYSTORE_BASE64 == '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          UNSIGNED_AAB=$(find app/build/outputs/bundle/release -name "*.aab" | head -1)
+          mv "$UNSIGNED_AAB" "app/build/outputs/bundle/release/acutis-firewall-${{ steps.version.outputs.VERSION }}.aab"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: app/build/outputs/apk/release/acutis-firewall-*.apk
+
+      - name: Upload App Bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: app/build/outputs/bundle/release/acutis-firewall-*.aab
 
   release:
     name: Create GitHub Release
@@ -129,6 +168,12 @@ jobs:
         with:
           name: release-apk
           path: apk
+
+      - name: Download App Bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-aab
+          path: aab
 
       - name: Generate release notes
         id: release_notes
@@ -167,6 +212,8 @@ jobs:
           name: Acutis Firewall v${{ steps.version.outputs.VERSION }}
           body: ${{ steps.release_notes.outputs.NOTES }}
           prerelease: ${{ steps.prerelease.outputs.IS_PRERELEASE }}
-          files: apk/acutis-firewall-*.apk
+          files: |
+            apk/acutis-firewall-*.apk
+            aab/acutis-firewall-*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
