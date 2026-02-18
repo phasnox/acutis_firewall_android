@@ -169,6 +169,15 @@ class SettingsViewModel @Inject constructor(
                 results.add("Gambling: ${gamblingResult.domainsAdded}")
             }
 
+            _uiState.value = _uiState.value.copy(downloadProgress = "Downloading social media list...")
+
+            // Download social media list
+            val socialMediaResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA)
+            if (socialMediaResult.success) {
+                totalDomains += socialMediaResult.domainsAdded
+                results.add("Social Media: ${socialMediaResult.domainsAdded}")
+            }
+
             _uiState.value = _uiState.value.copy(
                 isDownloading = false,
                 downloadProgress = "",

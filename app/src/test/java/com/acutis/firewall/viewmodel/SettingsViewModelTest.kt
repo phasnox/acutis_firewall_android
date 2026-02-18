@@ -288,9 +288,11 @@ class SettingsViewModelTest {
         val adultResult = BlocklistDownloader.DownloadResult(true, 1000)
         val malwareResult = BlocklistDownloader.DownloadResult(true, 500)
         val gamblingResult = BlocklistDownloader.DownloadResult(true, 200)
+        val socialMediaResult = BlocklistDownloader.DownloadResult(true, 100)
         coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT) } returns adultResult
         coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE) } returns malwareResult
         coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING) } returns gamblingResult
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA) } returns socialMediaResult
         viewModel = createViewModel()
         advanceUntilIdle()
 
@@ -302,7 +304,7 @@ class SettingsViewModelTest {
         viewModel.uiState.test {
             val state = awaitItem()
             assertThat(state.isDownloading).isFalse()
-            assertThat(state.lastDownloadResult).contains("1700")
+            assertThat(state.lastDownloadResult).contains("1800")
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -313,9 +315,11 @@ class SettingsViewModelTest {
         val adultResult = BlocklistDownloader.DownloadResult(true, 100)
         val malwareResult = BlocklistDownloader.DownloadResult(true, 50)
         val gamblingResult = BlocklistDownloader.DownloadResult(true, 25)
+        val socialMediaResult = BlocklistDownloader.DownloadResult(true, 10)
         coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT) } returns adultResult
         coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE) } returns malwareResult
         coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING) } returns gamblingResult
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA) } returns socialMediaResult
         viewModel = createViewModel()
         advanceUntilIdle()
 
@@ -323,10 +327,11 @@ class SettingsViewModelTest {
         viewModel.downloadBlocklists()
         advanceUntilIdle()
 
-        // Then - all three categories should be downloaded
+        // Then - all four categories should be downloaded
         coVerify { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT) }
         coVerify { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE) }
         coVerify { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING) }
+        coVerify { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA) }
     }
 
     @Test

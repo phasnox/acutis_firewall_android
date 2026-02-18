@@ -1,1 +1,0 @@
-Parental control app that blocks adult content and dangerous sites on-device.
