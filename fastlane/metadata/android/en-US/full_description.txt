@@ -1,0 +1,36 @@
+Acutis Firewall is a parental control app that protects your family by blocking adult content, malware, and dangerous websites. All filtering happens locally on your device for maximum privacy.
+
+<b>Key Features</b>
+
+<b>Content Protection</b>
+• Block adult and pornographic websites with a comprehensive blocklist
+• Protect against malware and phishing attacks with real-time DNS filtering
+• Optional blocking for gambling sites and social media platforms
+• Works across ALL apps, not just browsers
+
+<b>Time-Based Controls</b>
+• Set daily screen time limits for specific sites or categories
+• Schedule blocking during homework time, bedtime, or family hours
+• Choose which days of the week rules apply
+
+<b>Parental Controls</b>
+• PIN-protect settings so children cannot disable protection
+• One-tap activation with no configuration required
+• Auto-start protection when device boots
+
+<b>Privacy First</b>
+• All filtering happens on your device - no data sent to external servers
+• No analytics, tracking, or data collection
+• DNS queries go directly to your system DNS or Cloudflare
+• PIN stored with Android's encrypted storage
+
+<b>How It Works</b>
+
+Acutis Firewall creates a local VPN tunnel on your device to intercept DNS queries. When a blocked domain is requested, it returns "not found" - preventing the content from loading. Allowed traffic passes through normally with no slowdown.
+
+<b>Requirements</b>
+• Android 10 or higher
+• No root required
+• No subscription - completely free and open source
+
+Named after Blessed Carlo Acutis, patron of the internet.
