@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -57,8 +58,18 @@ class FirewallVpnService : VpnService() {
 
         // Use Google DNS as our "fake" DNS that we intercept
         private const val INTERCEPT_DNS = "8.8.8.8"
-        // Use Cloudflare DNS as the actual upstream
-        private val UPSTREAM_DNS = InetAddress.getByName("1.1.1.1")
+        // Fallback DNS if system DNS is not available
+        private val FALLBACK_DNS = InetAddress.getByName("1.1.1.1")
+    }
+
+    // Upstream DNS server (system default or fallback)
+    private var upstreamDns: InetAddress = FALLBACK_DNS
+
+    private fun getSystemDnsServers(): List<InetAddress> {
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork = connectivityManager.activeNetwork ?: return emptyList()
+        val linkProperties = connectivityManager.getLinkProperties(activeNetwork) ?: return emptyList()
+        return linkProperties.dnsServers
     }
 
     override fun onCreate() {
@@ -90,6 +101,11 @@ class FirewallVpnService : VpnService() {
 
         serviceScope.launch {
             try {
+                // Get system DNS before starting VPN (VPN will change network properties)
+                val systemDns = getSystemDnsServers().firstOrNull()
+                upstreamDns = systemDns ?: FALLBACK_DNS
+                Log.d(TAG, "Using upstream DNS: $upstreamDns")
+
                 blockedDomains = loadBlockedDomains()
                 Log.d(TAG, "Loaded ${blockedDomains.size} blocked domains")
                 // Log first 10 domains for debugging
@@ -336,7 +352,7 @@ class FirewallVpnService : VpnService() {
             protect(socket) // CRITICAL: Prevent routing loop
             socket.soTimeout = 5000
 
-            val packet = DatagramPacket(query, query.size, UPSTREAM_DNS, DNS_PORT)
+            val packet = DatagramPacket(query, query.size, upstreamDns, DNS_PORT)
             socket.send(packet)
 
             val responseBuffer = ByteArray(1024)
