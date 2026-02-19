@@ -34,7 +34,7 @@ Repo: https://github.com/phasnox/acutis_firewall_android.git
 
 Builds:
   - versionName: 1.0.0
-    versionCode: 10000
+    versionCode: 1
     commit: v1.0.0
     subdir: app
     gradle:
@@ -43,4 +43,4 @@ Builds:
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
 CurrentVersion: 1.0.0
-CurrentVersionCode: 10000
+CurrentVersionCode: 1
