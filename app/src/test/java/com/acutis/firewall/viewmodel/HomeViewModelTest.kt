@@ -3,7 +3,9 @@ package com.acutis.firewall.viewmodel
 import android.app.Application
 import app.cash.turbine.test
 import com.acutis.firewall.blocklist.BlocklistDownloader
+import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.TimeRule
+import com.acutis.firewall.data.db.entities.TimeRuleAction
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.data.repository.BlocklistRepository
 import com.acutis.firewall.data.repository.TimeRuleRepository
@@ -51,7 +53,16 @@ class HomeViewModelTest {
         coEvery { settingsDataStore.areDefaultTimeRulesCreated() } returns true
         coEvery { settingsDataStore.setDefaultTimeRulesCreated(any()) } just Runs
         coEvery { timeRuleRepository.addRule(any()) } returns 1L
-        every { timeRuleRepository.createDailyLimitRule(any(), any(), any(), any(), any(), any()) } returns mockk()
+        every { timeRuleRepository.createDailyLimitRule(any(), any(), any(), any(), any(), any()) } returns TimeRule(
+            domain = null,
+            category = BlockCategory.SOCIAL_MEDIA,
+            action = TimeRuleAction.ALLOW,
+            dailyLimitMinutes = 30,
+            startHour = null,
+            startMinute = null,
+            endHour = null,
+            endMinute = null
+        )
     }
 
     @After
