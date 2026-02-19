@@ -91,7 +91,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun createDefaultTimeRules() {
-        // Create a default rule: Allow social media for 30 minutes per day
+        // Create a default rule: Allow social media for 30 minutes per day (disabled by default)
         val socialMediaRule = timeRuleRepository.createDailyLimitRule(
             domain = null,
             category = BlockCategory.SOCIAL_MEDIA,
@@ -99,7 +99,7 @@ class HomeViewModel @Inject constructor(
             action = TimeRuleAction.ALLOW,
             limitMinutes = 30,
             daysOfWeek = listOf(1, 2, 3, 4, 5, 6, 7) // All days
-        )
+        ).copy(isEnabled = false)
         timeRuleRepository.addRule(socialMediaRule)
     }
 
