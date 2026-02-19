@@ -2,44 +2,29 @@ Categories:
   - Internet
   - Security
 License: MIT
-AuthorName: Castillo
+AuthorName: phasnox
 AuthorEmail: acutis@castillo.sh
 SourceCode: https://github.com/phasnox/acutis_firewall_android
 IssueTracker: https://github.com/phasnox/acutis_firewall_android/issues
 
 AutoName: Acutis Firewall
-Summary: Parental control app that blocks adult content and dangerous sites on-device
-
-Description: |
-  Acutis Firewall is a parental control app that protects your family by
-  blocking adult content, malware, and dangerous websites. All filtering
-  happens locally on your device for maximum privacy.
-
-  Features:
-  * Block adult and pornographic websites
-  * Protect against malware and phishing attacks
-  * Optional blocking for gambling and social media
-  * Works across ALL apps, not just browsers
-  * Set daily screen time limits
-  * Schedule blocking during specific hours
-  * PIN-protect settings
-  * No data collection or analytics
-  * Completely free and open source
-
-  Named after Blessed Carlo Acutis, patron of the internet.
 
 RepoType: git
 Repo: https://github.com/phasnox/acutis_firewall_android.git
+Binaries: 
+  https://github.com/phasnox/acutis_firewall_android/releases/download/v%v/acutis-firewall-%v-signed.apk
 
 Builds:
-  - versionName: 1.0.0
-    versionCode: 1
-    commit: v1.0.0
+  - versionName: 1.0.3
+    versionCode: 10003
+    commit: v1.0.3
     subdir: app
     gradle:
       - yes
 
+AllowedAPKSigningKeys: b5b17fc6f548a892765c41ede2fd5ec04134e28cd10a652ed0ea961ab64269eb
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
-CurrentVersion: 1.0.0
-CurrentVersionCode: 1
+CurrentVersion: 1.0.3
+CurrentVersionCode: 10003
