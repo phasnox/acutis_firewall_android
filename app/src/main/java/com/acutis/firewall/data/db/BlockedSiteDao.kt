@@ -31,6 +31,9 @@ interface BlockedSiteDao {
     @Query("SELECT COUNT(*) FROM blocked_sites WHERE category = :category AND isEnabled = 1")
     fun getEnabledCountByCategory(category: BlockCategory): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM blocked_sites WHERE category = :category")
+    fun getCountByCategory(category: BlockCategory): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(site: BlockedSite): Long
 

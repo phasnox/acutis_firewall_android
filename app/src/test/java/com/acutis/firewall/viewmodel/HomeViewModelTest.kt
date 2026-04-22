@@ -247,6 +247,93 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `updateBlocklists shows failure dialog when every category fails`() = runTest {
+        // Given - every category download fails (mimics the SSL-intercept scenario
+        // where the user's network blocks the blocklist CDNs).
+        val failed = BlocklistDownloader.DownloadResult(
+            success = false,
+            domainsAdded = 0,
+            urlsAttempted = 2,
+            urlsSucceeded = 0,
+            error = "SSLHandshakeException: trust anchor missing"
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) } returns failed
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.updateBlocklists()
+        advanceUntilIdle()
+
+        // Then - user must be informed the update failed (not "Update Complete").
+        val state = viewModel.uiState.value
+        assertThat(state.showUpdateResult).isTrue()
+        assertThat(state.updateResultIsError).isTrue()
+        assertThat(state.updateResultTitle).isEqualTo("Update Failed")
+        assertThat(state.updateResultMessage).contains("SSLHandshakeException")
+    }
+
+    @Test
+    fun `updateBlocklists shows incomplete dialog when some categories fail`() = runTest {
+        // Given - adult succeeds, the rest fail.
+        val ok = BlocklistDownloader.DownloadResult(
+            success = true,
+            domainsAdded = 50_000,
+            urlsAttempted = 2,
+            urlsSucceeded = 2
+        )
+        val failed = BlocklistDownloader.DownloadResult(
+            success = false,
+            domainsAdded = 0,
+            urlsAttempted = 1,
+            urlsSucceeded = 0,
+            error = "IOException: timeout"
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT, any()) } returns ok
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE, any()) } returns failed
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING, any()) } returns failed
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA, any()) } returns failed
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.updateBlocklists()
+        advanceUntilIdle()
+
+        // Then
+        val state = viewModel.uiState.value
+        assertThat(state.showUpdateResult).isTrue()
+        assertThat(state.updateResultIsError).isTrue()
+        assertThat(state.updateResultTitle).isEqualTo("Update Incomplete")
+        assertThat(state.updateResultMessage).contains("Adult: 50000")
+        assertThat(state.updateResultMessage).contains("Failed")
+    }
+
+    @Test
+    fun `updateBlocklists shows complete dialog when all succeed`() = runTest {
+        // Given
+        val ok = BlocklistDownloader.DownloadResult(
+            success = true,
+            domainsAdded = 10_000,
+            urlsAttempted = 1,
+            urlsSucceeded = 1
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) } returns ok
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.updateBlocklists()
+        advanceUntilIdle()
+
+        // Then
+        val state = viewModel.uiState.value
+        assertThat(state.showUpdateResult).isTrue()
+        assertThat(state.updateResultIsError).isFalse()
+        assertThat(state.updateResultTitle).isEqualTo("Update Complete")
+    }
+
+    @Test
     fun `dismissUpdateResult clears update result`() = runTest {
         // Given
         viewModel = createViewModel()

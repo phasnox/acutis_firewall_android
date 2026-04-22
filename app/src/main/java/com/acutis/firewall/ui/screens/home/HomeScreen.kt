@@ -62,7 +62,7 @@ fun HomeScreen(
     if (uiState.showUpdateResult) {
         AlertDialog(
             onDismissRequest = viewModel::dismissUpdateResult,
-            title = { Text("Update Complete") },
+            title = { Text(uiState.updateResultTitle.ifEmpty { "Update Complete" }) },
             text = { Text(uiState.updateResultMessage) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissUpdateResult) {

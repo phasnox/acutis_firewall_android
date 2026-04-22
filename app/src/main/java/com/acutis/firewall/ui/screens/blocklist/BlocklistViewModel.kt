@@ -14,8 +14,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class BlocklistUiState(
-    val sites: List<BlockedSite> = emptyList(),
-    val customSites: List<BlockedSite> = emptyList(),
     val customLists: List<CustomBlocklist> = emptyList(),
     val adultEnabled: Boolean = true,
     val malwareEnabled: Boolean = true,
@@ -58,12 +56,13 @@ class BlocklistViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val sitesFlow = combine(
-                blocklistRepository.getAllSites(),
-                blocklistRepository.getCustomSites(),
-                customBlocklistRepository.getAllLists()
-            ) { sites, customSites, customLists ->
-                Triple(sites, customSites, customLists)
+            val countsFlow = combine(
+                blocklistRepository.getCountByCategory(BlockCategory.ADULT),
+                blocklistRepository.getCountByCategory(BlockCategory.MALWARE),
+                blocklistRepository.getCountByCategory(BlockCategory.GAMBLING),
+                blocklistRepository.getCountByCategory(BlockCategory.SOCIAL_MEDIA)
+            ) { adult, malware, gambling, social ->
+                listOf(adult, malware, gambling, social)
             }
 
             val settingsFlow = combine(
@@ -76,19 +75,21 @@ class BlocklistViewModel @Inject constructor(
                 listOf(adult, malware, gambling, social, pinEnabled)
             }
 
-            combine(sitesFlow, settingsFlow) { (sites, customSites, customLists), settings ->
+            combine(
+                customBlocklistRepository.getAllLists(),
+                countsFlow,
+                settingsFlow
+            ) { customLists, counts, settings ->
                 BlocklistUiState(
-                    sites = sites,
-                    customSites = customSites.filter { it.customListId == null },
                     customLists = customLists,
                     adultEnabled = settings[0],
                     malwareEnabled = settings[1],
                     gamblingEnabled = settings[2],
                     socialMediaEnabled = settings[3],
-                    adultCount = sites.count { it.category == BlockCategory.ADULT },
-                    malwareCount = sites.count { it.category == BlockCategory.MALWARE },
-                    gamblingCount = sites.count { it.category == BlockCategory.GAMBLING },
-                    socialMediaCount = sites.count { it.category == BlockCategory.SOCIAL_MEDIA },
+                    adultCount = counts[0],
+                    malwareCount = counts[1],
+                    gamblingCount = counts[2],
+                    socialMediaCount = counts[3],
                     showAddDialog = _uiState.value.showAddDialog,
                     showAddListDialog = _uiState.value.showAddListDialog,
                     selectedTab = _uiState.value.selectedTab,

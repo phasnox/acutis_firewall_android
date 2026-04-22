@@ -31,6 +31,9 @@ class BlocklistRepository @Inject constructor(
     fun getEnabledCountByCategory(category: BlockCategory): Flow<Int> =
         blockedSiteDao.getEnabledCountByCategory(category)
 
+    fun getCountByCategory(category: BlockCategory): Flow<Int> =
+        blockedSiteDao.getCountByCategory(category)
+
     suspend fun addCustomSite(domain: String): Boolean {
         val normalizedDomain = normalizeDomain(domain)
         val existing = blockedSiteDao.getSiteByDomain(normalizedDomain)

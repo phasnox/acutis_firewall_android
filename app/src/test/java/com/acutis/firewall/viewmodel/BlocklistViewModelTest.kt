@@ -50,8 +50,14 @@ class BlocklistViewModelTest {
         customBlocklistRepository = mockk(relaxed = true)
         settingsDataStore = mockk(relaxed = true)
 
-        every { blocklistRepository.getAllSites() } returns flowOf(testSites)
-        every { blocklistRepository.getCustomSites() } returns flowOf(testSites.filter { it.isCustom })
+        every { blocklistRepository.getCountByCategory(BlockCategory.ADULT) } returns
+            flowOf(testSites.count { it.category == BlockCategory.ADULT })
+        every { blocklistRepository.getCountByCategory(BlockCategory.MALWARE) } returns
+            flowOf(testSites.count { it.category == BlockCategory.MALWARE })
+        every { blocklistRepository.getCountByCategory(BlockCategory.GAMBLING) } returns
+            flowOf(testSites.count { it.category == BlockCategory.GAMBLING })
+        every { blocklistRepository.getCountByCategory(BlockCategory.SOCIAL_MEDIA) } returns
+            flowOf(testSites.count { it.category == BlockCategory.SOCIAL_MEDIA })
         every { customBlocklistRepository.getAllLists() } returns flowOf(testCustomLists)
         every { settingsDataStore.adultBlockEnabled } returns flowOf(true)
         every { settingsDataStore.malwareBlockEnabled } returns flowOf(true)
@@ -426,5 +432,17 @@ class BlocklistViewModelTest {
 
         // Then
         coVerify { customBlocklistRepository.toggleListEnabled(1L, false) }
+    }
+
+    // Locks in the fix for the v1.0.3 CursorWindow crash: once a blocklist
+    // exceeds ~140k rows, loading the whole list via Room trips SQLite's 2MB
+    // CursorWindow limit. The ViewModel must rely on COUNT flows only.
+    @Test
+    fun `does not load full site list on init`() = runTest {
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        verify(exactly = 0) { blocklistRepository.getAllSites() }
+        verify(exactly = 0) { blocklistRepository.getCustomSites() }
     }
 }

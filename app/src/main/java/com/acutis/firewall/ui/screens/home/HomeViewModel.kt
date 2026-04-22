@@ -29,7 +29,9 @@ data class HomeUiState(
     val isUpdatingBlocklists: Boolean = false,
     val updateStatus: String = "",
     val showUpdateResult: Boolean = false,
+    val updateResultTitle: String = "",
     val updateResultMessage: String = "",
+    val updateResultIsError: Boolean = false,
     val showVpnConflictAlert: Boolean = false,
     val showLockdownWarning: Boolean = false,
     val isTogglingFirewall: Boolean = false
@@ -194,54 +196,70 @@ class HomeViewModel @Inject constructor(
         )
 
         var totalDomains = 0
-        val results = mutableListOf<String>()
+        val successLines = mutableListOf<String>()
+        val failureLines = mutableListOf<String>()
+
+        fun record(label: String, result: BlocklistDownloader.DownloadResult) {
+            if (result.success) {
+                totalDomains += result.domainsAdded
+                successLines.add("$label: ${result.domainsAdded}")
+            } else {
+                failureLines.add("$label: ${result.error ?: "download failed"}")
+            }
+        }
 
         try {
-            // Download adult content list
             _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for adult content...")
-            val adultResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT)
-            if (adultResult.success) {
-                totalDomains += adultResult.domainsAdded
-                results.add("Adult: ${adultResult.domainsAdded}")
-            }
+            record("Adult", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT))
 
-            // Download malware list
             _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for malware...")
-            val malwareResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE)
-            if (malwareResult.success) {
-                totalDomains += malwareResult.domainsAdded
-                results.add("Malware: ${malwareResult.domainsAdded}")
-            }
+            record("Malware", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE))
 
-            // Download gambling list
             _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for gambling...")
-            val gamblingResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING)
-            if (gamblingResult.success) {
-                totalDomains += gamblingResult.domainsAdded
-                results.add("Gambling: ${gamblingResult.domainsAdded}")
-            }
+            record("Gambling", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING))
 
-            // Download social media list
             _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for social media...")
-            val socialMediaResult = blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA)
-            if (socialMediaResult.success) {
-                totalDomains += socialMediaResult.domainsAdded
-                results.add("Social Media: ${socialMediaResult.domainsAdded}")
+            record("Social Media", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA))
+
+            val anyFailed = failureLines.isNotEmpty()
+            val anySucceeded = successLines.isNotEmpty()
+            val title = when {
+                !anySucceeded -> "Update Failed"
+                anyFailed -> "Update Incomplete"
+                else -> "Update Complete"
+            }
+            val message = buildString {
+                if (anySucceeded) {
+                    append("Downloaded $totalDomains domains\n")
+                    append(successLines.joinToString("\n"))
+                }
+                if (anyFailed) {
+                    if (isNotEmpty()) append("\n\n")
+                    append("Failed:\n")
+                    append(failureLines.joinToString("\n"))
+                }
+                if (!anySucceeded && !anyFailed) {
+                    append("No blocklists were updated.")
+                }
             }
 
             _uiState.value = _uiState.value.copy(
                 isUpdatingBlocklists = false,
                 updateStatus = "",
-                showUpdateResult = !isInitialDownload,
-                updateResultMessage = "Downloaded $totalDomains domains\n${results.joinToString("\n")}"
+                showUpdateResult = !isInitialDownload || anyFailed,
+                updateResultTitle = title,
+                updateResultMessage = message,
+                updateResultIsError = !anySucceeded || anyFailed
             )
 
         } catch (e: Exception) {
             _uiState.value = _uiState.value.copy(
                 isUpdatingBlocklists = false,
                 updateStatus = "",
-                showUpdateResult = !isInitialDownload,
-                updateResultMessage = "Error downloading blocklists: ${e.message}"
+                showUpdateResult = true,
+                updateResultTitle = "Update Failed",
+                updateResultMessage = "Error downloading blocklists: ${e.message}",
+                updateResultIsError = true
             )
         }
     }

@@ -10,15 +10,14 @@ import com.acutis.firewall.service.FirewallVpnService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BlocklistDownloader @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val blockedSiteDao: BlockedSiteDao
+    private val blockedSiteDao: BlockedSiteDao,
+    private val fetcher: HttpFetcher
 ) {
     companion object {
         private const val TAG = "BlocklistDownloader"
@@ -49,6 +48,8 @@ class BlocklistDownloader @Inject constructor(
     data class DownloadResult(
         val success: Boolean,
         val domainsAdded: Int,
+        val urlsAttempted: Int = 0,
+        val urlsSucceeded: Int = 0,
         val error: String? = null
     )
 
@@ -57,25 +58,37 @@ class BlocklistDownloader @Inject constructor(
         urls: List<String> = getUrlsForCategory(category)
     ): DownloadResult = withContext(Dispatchers.IO) {
         var totalAdded = 0
+        val allDomains = mutableSetOf<String>()
+        var urlsSucceeded = 0
+        val failures = mutableListOf<String>()
+
+        for (url in urls) {
+            try {
+                Log.d(TAG, "Downloading from: $url")
+                val domains = downloadHostsFile(url)
+                Log.d(TAG, "Got ${domains.size} domains from $url")
+                allDomains.addAll(domains)
+                urlsSucceeded++
+            } catch (e: Exception) {
+                Log.e(TAG, "Error downloading $url", e)
+                failures.add("${e.javaClass.simpleName}: ${e.message ?: "unknown"}")
+            }
+        }
+
+        // If every source failed, don't wipe what we already have — report failure.
+        if (urlsSucceeded == 0 && urls.isNotEmpty()) {
+            return@withContext DownloadResult(
+                success = false,
+                domainsAdded = 0,
+                urlsAttempted = urls.size,
+                urlsSucceeded = 0,
+                error = failures.firstOrNull() ?: "All ${urls.size} sources failed"
+            )
+        }
 
         try {
-            // Clear existing non-custom entries for this category
             blockedSiteDao.deleteByCategory(category)
 
-            val allDomains = mutableSetOf<String>()
-
-            for (url in urls) {
-                try {
-                    Log.d(TAG, "Downloading from: $url")
-                    val domains = downloadHostsFile(url)
-                    Log.d(TAG, "Got ${domains.size} domains from $url")
-                    allDomains.addAll(domains)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error downloading $url", e)
-                }
-            }
-
-            // Convert to BlockedSite entities and save in batches
             val sites = allDomains.map { domain ->
                 BlockedSite(
                     domain = domain,
@@ -85,7 +98,6 @@ class BlocklistDownloader @Inject constructor(
                 )
             }
 
-            // Save in batches of 1000 to avoid memory issues
             sites.chunked(1000).forEach { batch ->
                 blockedSiteDao.insertAll(batch)
                 totalAdded += batch.size
@@ -93,37 +105,34 @@ class BlocklistDownloader @Inject constructor(
 
             Log.d(TAG, "Saved $totalAdded domains for category $category")
             notifyBlocklistChanged()
-            DownloadResult(success = true, domainsAdded = totalAdded)
+            DownloadResult(
+                success = true,
+                domainsAdded = totalAdded,
+                urlsAttempted = urls.size,
+                urlsSucceeded = urlsSucceeded
+            )
 
         } catch (e: Exception) {
             Log.e(TAG, "Error saving blocklist", e)
-            DownloadResult(success = false, domainsAdded = totalAdded, error = e.message)
+            DownloadResult(
+                success = false,
+                domainsAdded = totalAdded,
+                urlsAttempted = urls.size,
+                urlsSucceeded = urlsSucceeded,
+                error = e.message
+            )
         }
     }
 
     private fun downloadHostsFile(urlString: String): Set<String> {
         val domains = mutableSetOf<String>()
-        val url = URL(urlString)
-        val connection = url.openConnection() as HttpURLConnection
-
-        try {
-            connection.connectTimeout = 30000
-            connection.readTimeout = 30000
-            connection.requestMethod = "GET"
-
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                connection.inputStream.bufferedReader().useLines { lines ->
-                    lines.forEach { line ->
-                        parseDomainFromLine(line)?.let { domain ->
-                            domains.add(domain)
-                        }
-                    }
+        fetcher.fetchLines(urlString) { lines ->
+            lines.forEach { line ->
+                parseDomainFromLine(line)?.let { domain ->
+                    domains.add(domain)
                 }
             }
-        } finally {
-            connection.disconnect()
         }
-
         return domains
     }
 

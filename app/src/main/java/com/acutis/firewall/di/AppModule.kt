@@ -3,6 +3,8 @@ package com.acutis.firewall.di
 import android.content.Context
 import androidx.room.Room
 import androidx.work.WorkManager
+import com.acutis.firewall.blocklist.DefaultHttpFetcher
+import com.acutis.firewall.blocklist.HttpFetcher
 import com.acutis.firewall.data.db.AppDatabase
 import com.acutis.firewall.data.db.BlockedSiteDao
 import com.acutis.firewall.data.db.CustomBlocklistDao
@@ -17,6 +19,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideHttpFetcher(impl: DefaultHttpFetcher): HttpFetcher = impl
 
     @Provides
     @Singleton
