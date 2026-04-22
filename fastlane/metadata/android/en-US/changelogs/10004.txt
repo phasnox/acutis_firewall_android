@@ -1,0 +1,3 @@
+• Fix crash when opening Blocked Sites with large blocklists (SQLite CursorWindow limit)
+• Fix update flow showing "Update Complete" when downloads silently failed; failures are now reported and existing data is preserved on total failure
+• Enable predictive back gesture on Android 14+
