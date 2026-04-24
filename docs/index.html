@@ -295,7 +295,7 @@
         <div class="container">
             <h1>Protect Your Family Online</h1>
             <p>Block adult content, malware, and dangerous sites. Set screen time limits. All filtering happens on your device for maximum privacy.</p>
-            <a href="https://play.google.com/store/apps/details?id=com.acutis.firewall" class="btn">Get it on Google Play</a>
+            <a href="https://github.com/phasnox/acutis_firewall_android/releases/latest" class="btn" id="download-btn">Download APK</a>
             <br>
             <img src="images/main.jpg" alt="Acutis Firewall App" class="hero-image">
         </div>
@@ -387,5 +387,16 @@
             <p style="margin-top: 10px; opacity: 0.7;">&copy; 2026 Acutis Firewall. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        fetch('https://api.github.com/repos/phasnox/acutis_firewall_android/releases/latest')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const apk = data.assets.find(a => a.name.endsWith('.apk'));
+                if (apk) document.getElementById('download-btn').href = apk.browser_download_url;
+            })
+            .catch(() => {});
+    </script>
 </body>
 </html>
