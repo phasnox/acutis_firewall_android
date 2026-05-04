@@ -1,6 +1,7 @@
 package com.acutis.firewall.viewmodel
 
 import app.cash.turbine.test
+import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.BlockedSite
 import com.acutis.firewall.data.db.entities.CustomBlocklist
@@ -24,6 +25,7 @@ class BlocklistViewModelTest {
     private lateinit var blocklistRepository: BlocklistRepository
     private lateinit var customBlocklistRepository: CustomBlocklistRepository
     private lateinit var settingsDataStore: SettingsDataStore
+    private lateinit var blocklistDownloader: BlocklistDownloader
     private lateinit var viewModel: BlocklistViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -49,6 +51,7 @@ class BlocklistViewModelTest {
         blocklistRepository = mockk(relaxed = true)
         customBlocklistRepository = mockk(relaxed = true)
         settingsDataStore = mockk(relaxed = true)
+        blocklistDownloader = mockk(relaxed = true)
 
         every { blocklistRepository.getCountByCategory(BlockCategory.ADULT) } returns
             flowOf(testSites.count { it.category == BlockCategory.ADULT })
@@ -73,7 +76,7 @@ class BlocklistViewModelTest {
     }
 
     private fun createViewModel(): BlocklistViewModel {
-        return BlocklistViewModel(blocklistRepository, customBlocklistRepository, settingsDataStore)
+        return BlocklistViewModel(blocklistRepository, customBlocklistRepository, settingsDataStore, blocklistDownloader)
     }
 
     @Test
@@ -444,5 +447,118 @@ class BlocklistViewModelTest {
 
         verify(exactly = 0) { blocklistRepository.getAllSites() }
         verify(exactly = 0) { blocklistRepository.getCustomSites() }
+    }
+
+    @Test
+    fun `enabling category with existing domains does not trigger download`() = runTest {
+        // Given - adultCount is 2 (from default test data)
+        coEvery { settingsDataStore.setAdultBlockEnabled(any()) } just Runs
+        coEvery { blocklistRepository.setCategoryEnabled(any(), any()) } just Runs
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.toggleAdultBlock(true)
+        advanceUntilIdle()
+
+        // Then
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) }
+    }
+
+    @Test
+    fun `enabling empty category triggers download for that category only`() = runTest {
+        // Given - empty social media category
+        every { blocklistRepository.getCountByCategory(BlockCategory.SOCIAL_MEDIA) } returns flowOf(0)
+        coEvery { settingsDataStore.setSocialMediaBlockEnabled(any()) } just Runs
+        coEvery { blocklistRepository.setCategoryEnabled(any(), any()) } just Runs
+        val ok = BlocklistDownloader.DownloadResult(
+            success = true,
+            domainsAdded = 1234,
+            urlsAttempted = 1,
+            urlsSucceeded = 1
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA, any()) } returns ok
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.toggleSocialMediaBlock(true)
+        advanceUntilIdle()
+
+        // Then - only social media downloaded
+        coVerify(exactly = 1) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA, any()) }
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT, any()) }
+    }
+
+    @Test
+    fun `disabling category never triggers download`() = runTest {
+        // Given - PIN not enabled so disable is allowed without prompt
+        every { settingsDataStore.pinEnabled } returns flowOf(false)
+        coEvery { settingsDataStore.setAdultBlockEnabled(any()) } just Runs
+        coEvery { blocklistRepository.setCategoryEnabled(any(), any()) } just Runs
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.toggleAdultBlock(false)
+        advanceUntilIdle()
+
+        // Then
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) }
+    }
+
+    @Test
+    fun `failed download surfaces an error to the UI`() = runTest {
+        // Given - empty gambling category
+        every { blocklistRepository.getCountByCategory(BlockCategory.GAMBLING) } returns flowOf(0)
+        coEvery { settingsDataStore.setGamblingBlockEnabled(any()) } just Runs
+        coEvery { blocklistRepository.setCategoryEnabled(any(), any()) } just Runs
+        val failed = BlocklistDownloader.DownloadResult(
+            success = false,
+            domainsAdded = 0,
+            urlsAttempted = 1,
+            urlsSucceeded = 0,
+            error = "IOException: timeout"
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING, any()) } returns failed
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.toggleGamblingBlock(true)
+        advanceUntilIdle()
+
+        // Then
+        val state = viewModel.uiState.value
+        assertThat(state.downloadError).isNotNull()
+        assertThat(state.downloadError!!.category).isEqualTo(BlockCategory.GAMBLING)
+        assertThat(state.downloadError!!.message).contains("timeout")
+    }
+
+    @Test
+    fun `dismissDownloadError clears the error`() = runTest {
+        // Given - empty social media that will fail
+        every { blocklistRepository.getCountByCategory(BlockCategory.SOCIAL_MEDIA) } returns flowOf(0)
+        coEvery { settingsDataStore.setSocialMediaBlockEnabled(any()) } just Runs
+        coEvery { blocklistRepository.setCategoryEnabled(any(), any()) } just Runs
+        val failed = BlocklistDownloader.DownloadResult(
+            success = false,
+            domainsAdded = 0,
+            urlsAttempted = 1,
+            urlsSucceeded = 0,
+            error = "boom"
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA, any()) } returns failed
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.toggleSocialMediaBlock(true)
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.downloadError).isNotNull()
+
+        // When
+        viewModel.dismissDownloadError()
+
+        // Then
+        assertThat(viewModel.uiState.value.downloadError).isNull()
     }
 }

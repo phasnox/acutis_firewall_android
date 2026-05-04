@@ -47,11 +47,17 @@ class HomeViewModelTest {
         every { settingsDataStore.firewallEnabled } returns flowOf(false)
         every { settingsDataStore.pinEnabled } returns flowOf(false)
         every { settingsDataStore.lockdownModeDetected } returns flowOf(false)
+        every { settingsDataStore.adultBlockEnabled } returns flowOf(true)
+        every { settingsDataStore.malwareBlockEnabled } returns flowOf(true)
+        every { settingsDataStore.gamblingBlockEnabled } returns flowOf(false)
+        every { settingsDataStore.socialMediaBlockEnabled } returns flowOf(false)
         every { blocklistRepository.getEnabledCount() } returns flowOf(100)
         every { settingsDataStore.hasPin() } returns false
         coEvery { settingsDataStore.setLockdownModeDetected(any()) } just Runs
         coEvery { settingsDataStore.areDefaultTimeRulesCreated() } returns true
         coEvery { settingsDataStore.setDefaultTimeRulesCreated(any()) } just Runs
+        coEvery { settingsDataStore.isInitialDownloadPromptShown() } returns true
+        coEvery { settingsDataStore.setInitialDownloadPromptShown(any()) } just Runs
         coEvery { timeRuleRepository.addRule(any()) } returns 1L
         every { timeRuleRepository.createDailyLimitRule(any(), any(), any(), any(), any(), any()) } returns TimeRule(
             domain = null,
@@ -548,6 +554,141 @@ class HomeViewModelTest {
         // Then - should now be toggling
         assertThat(viewModel.uiState.value.showPinDialog).isFalse()
         assertThat(viewModel.uiState.value.isTogglingFirewall).isTrue()
+    }
+
+    @Test
+    fun `first launch with no domains shows download prompt`() = runTest {
+        // Given - no domains downloaded yet AND prompt has never been shown
+        every { blocklistRepository.getEnabledCount() } returns flowOf(0)
+        coEvery { settingsDataStore.isInitialDownloadPromptShown() } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then - prompt is visible
+        assertThat(viewModel.uiState.value.showInitialDownloadPrompt).isTrue()
+        // And no download was triggered without consent
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) }
+    }
+
+    @Test
+    fun `first launch does not show prompt if already shown`() = runTest {
+        // Given - no domains, but prompt was already shown previously
+        every { blocklistRepository.getEnabledCount() } returns flowOf(0)
+        coEvery { settingsDataStore.isInitialDownloadPromptShown() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        assertThat(viewModel.uiState.value.showInitialDownloadPrompt).isFalse()
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) }
+    }
+
+    @Test
+    fun `first launch does not show prompt if domains exist`() = runTest {
+        // Given - domains already exist (e.g., user re-installed and DB persisted)
+        every { blocklistRepository.getEnabledCount() } returns flowOf(50)
+        coEvery { settingsDataStore.isInitialDownloadPromptShown() } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Then
+        assertThat(viewModel.uiState.value.showInitialDownloadPrompt).isFalse()
+    }
+
+    @Test
+    fun `onAcceptInitialDownload hides prompt, marks shown, and downloads enabled categories`() = runTest {
+        // Given - first launch state, only adult and malware enabled
+        every { blocklistRepository.getEnabledCount() } returns flowOf(0)
+        coEvery { settingsDataStore.isInitialDownloadPromptShown() } returns false
+        val ok = BlocklistDownloader.DownloadResult(
+            success = true,
+            domainsAdded = 1000,
+            urlsAttempted = 1,
+            urlsSucceeded = 1
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) } returns ok
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.onAcceptInitialDownload()
+        advanceUntilIdle()
+
+        // Then
+        assertThat(viewModel.uiState.value.showInitialDownloadPrompt).isFalse()
+        coVerify { settingsDataStore.setInitialDownloadPromptShown(true) }
+        // Adult + malware default to enabled, gambling + social do not
+        coVerify { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT, any()) }
+        coVerify { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE, any()) }
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING, any()) }
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA, any()) }
+    }
+
+    @Test
+    fun `onDeclineInitialDownload hides prompt, marks shown, and does not download`() = runTest {
+        // Given - first launch state
+        every { blocklistRepository.getEnabledCount() } returns flowOf(0)
+        coEvery { settingsDataStore.isInitialDownloadPromptShown() } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.onDeclineInitialDownload()
+        advanceUntilIdle()
+
+        // Then
+        assertThat(viewModel.uiState.value.showInitialDownloadPrompt).isFalse()
+        coVerify { settingsDataStore.setInitialDownloadPromptShown(true) }
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) }
+    }
+
+    @Test
+    fun `updateBlocklists skips disabled categories`() = runTest {
+        // Given - only malware enabled
+        every { settingsDataStore.adultBlockEnabled } returns flowOf(false)
+        every { settingsDataStore.malwareBlockEnabled } returns flowOf(true)
+        every { settingsDataStore.gamblingBlockEnabled } returns flowOf(false)
+        every { settingsDataStore.socialMediaBlockEnabled } returns flowOf(false)
+        val ok = BlocklistDownloader.DownloadResult(
+            success = true,
+            domainsAdded = 100,
+            urlsAttempted = 1,
+            urlsSucceeded = 1
+        )
+        coEvery { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) } returns ok
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.updateBlocklists()
+        advanceUntilIdle()
+
+        // Then - only malware was attempted
+        coVerify(exactly = 1) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE, any()) }
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT, any()) }
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING, any()) }
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA, any()) }
+    }
+
+    @Test
+    fun `updateBlocklists with no enabled categories shows nothing-to-update message`() = runTest {
+        // Given - all categories disabled
+        every { settingsDataStore.adultBlockEnabled } returns flowOf(false)
+        every { settingsDataStore.malwareBlockEnabled } returns flowOf(false)
+        every { settingsDataStore.gamblingBlockEnabled } returns flowOf(false)
+        every { settingsDataStore.socialMediaBlockEnabled } returns flowOf(false)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.updateBlocklists()
+        advanceUntilIdle()
+
+        // Then - no network calls, message indicates nothing to do
+        coVerify(exactly = 0) { blocklistDownloader.downloadAndSaveBlocklist(any(), any()) }
+        val state = viewModel.uiState.value
+        assertThat(state.showUpdateResult).isTrue()
+        assertThat(state.updateResultTitle).isEqualTo("Nothing to Update")
     }
 
     @Test

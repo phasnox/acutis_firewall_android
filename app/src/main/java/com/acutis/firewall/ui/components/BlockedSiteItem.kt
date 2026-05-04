@@ -95,7 +95,8 @@ fun CategoryToggleCard(
     isEnabled: Boolean,
     color: Color,
     onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDownloading: Boolean = false
 ) {
     Card(
         modifier = modifier
@@ -122,10 +123,18 @@ fun CategoryToggleCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "$count sites",
+                    text = if (isDownloading) "Downloading..." else "$count sites",
                     style = MaterialTheme.typography.labelSmall,
                     color = color
                 )
+            }
+            if (isDownloading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = color
+                )
+                Spacer(modifier = Modifier.width(12.dp))
             }
             Switch(
                 checked = isEnabled,

@@ -72,6 +72,30 @@ fun HomeScreen(
         )
     }
 
+    if (uiState.showInitialDownloadPrompt) {
+        AlertDialog(
+            onDismissRequest = viewModel::onDeclineInitialDownload,
+            title = { Text("Download blocklists?") },
+            text = {
+                Text(
+                    "Acutis Firewall blocks domains using rule lists hosted on " +
+                    "GitHub. Download them now to start filtering, or skip and " +
+                    "enable categories later in Blocked Sites."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::onAcceptInitialDownload) {
+                    Text("Download")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::onDeclineInitialDownload) {
+                    Text("Not now")
+                }
+            }
+        )
+    }
+
     if (uiState.showVpnConflictAlert) {
         AlertDialog(
             onDismissRequest = viewModel::dismissVpnConflictAlert,

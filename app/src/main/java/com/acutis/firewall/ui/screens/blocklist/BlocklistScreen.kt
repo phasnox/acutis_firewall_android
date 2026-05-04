@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.acutis.firewall.R
+import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.CustomBlocklist
 import com.acutis.firewall.ui.components.AddDomainDialog
 import com.acutis.firewall.ui.components.BlockedSiteItem
@@ -53,6 +54,26 @@ fun BlocklistScreen(
             onDismiss = viewModel::dismissPinDialog,
             onPinEntered = viewModel::verifyPin,
             isError = uiState.pinError
+        )
+    }
+
+    uiState.downloadError?.let { error ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissDownloadError,
+            title = { Text("Download failed") },
+            text = {
+                Text(
+                    "Could not download the ${categoryLabel(error.category)} blocklist.\n\n" +
+                    "${error.message}\n\n" +
+                    "The category is enabled but currently has no rules. " +
+                    "Tap \"Update Blocklists\" on the home screen to retry."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissDownloadError) {
+                    Text("OK")
+                }
+            }
         )
     }
 
@@ -121,7 +142,8 @@ private fun DefaultBlocklistsTab(
                 count = uiState.adultCount,
                 isEnabled = uiState.adultEnabled,
                 color = FirewallColors.adult,
-                onToggle = viewModel::toggleAdultBlock
+                onToggle = viewModel::toggleAdultBlock,
+                isDownloading = BlockCategory.ADULT in uiState.downloadingCategories
             )
         }
         item {
@@ -131,7 +153,8 @@ private fun DefaultBlocklistsTab(
                 count = uiState.malwareCount,
                 isEnabled = uiState.malwareEnabled,
                 color = FirewallColors.malware,
-                onToggle = viewModel::toggleMalwareBlock
+                onToggle = viewModel::toggleMalwareBlock,
+                isDownloading = BlockCategory.MALWARE in uiState.downloadingCategories
             )
         }
         item {
@@ -141,7 +164,8 @@ private fun DefaultBlocklistsTab(
                 count = uiState.gamblingCount,
                 isEnabled = uiState.gamblingEnabled,
                 color = FirewallColors.gambling,
-                onToggle = viewModel::toggleGamblingBlock
+                onToggle = viewModel::toggleGamblingBlock,
+                isDownloading = BlockCategory.GAMBLING in uiState.downloadingCategories
             )
         }
         item {
@@ -151,10 +175,19 @@ private fun DefaultBlocklistsTab(
                 count = uiState.socialMediaCount,
                 isEnabled = uiState.socialMediaEnabled,
                 color = FirewallColors.socialMedia,
-                onToggle = viewModel::toggleSocialMediaBlock
+                onToggle = viewModel::toggleSocialMediaBlock,
+                isDownloading = BlockCategory.SOCIAL_MEDIA in uiState.downloadingCategories
             )
         }
     }
+}
+
+private fun categoryLabel(category: BlockCategory): String = when (category) {
+    BlockCategory.ADULT -> "adult content"
+    BlockCategory.MALWARE -> "malware"
+    BlockCategory.GAMBLING -> "gambling"
+    BlockCategory.SOCIAL_MEDIA -> "social media"
+    BlockCategory.CUSTOM -> "custom"
 }
 
 @Composable

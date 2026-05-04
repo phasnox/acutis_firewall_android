@@ -34,7 +34,8 @@ data class HomeUiState(
     val updateResultIsError: Boolean = false,
     val showVpnConflictAlert: Boolean = false,
     val showLockdownWarning: Boolean = false,
-    val isTogglingFirewall: Boolean = false
+    val isTogglingFirewall: Boolean = false,
+    val showInitialDownloadPrompt: Boolean = false
 )
 
 enum class PendingAction {
@@ -74,12 +75,15 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        // Check if blocklists need to be downloaded on first launch
+        // First launch: ask the user before reaching out to remote blocklist
+        // sources. We only consider it "first launch" if the prompt has never
+        // been shown AND no blocklist data has been downloaded yet.
         viewModelScope.launch {
-            val count = blocklistRepository.getEnabledCount().first()
-            if (count == 0) {
-                // First launch - download blocklists
-                downloadBlocklistsInternal(isInitialDownload = true)
+            if (!settingsDataStore.isInitialDownloadPromptShown()) {
+                val count = blocklistRepository.getEnabledCount().first()
+                if (count == 0) {
+                    _uiState.value = _uiState.value.copy(showInitialDownloadPrompt = true)
+                }
             }
         }
 
@@ -189,6 +193,30 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun onAcceptInitialDownload() {
+        _uiState.value = _uiState.value.copy(showInitialDownloadPrompt = false)
+        viewModelScope.launch {
+            settingsDataStore.setInitialDownloadPromptShown(true)
+            downloadBlocklistsInternal(isInitialDownload = true)
+        }
+    }
+
+    fun onDeclineInitialDownload() {
+        _uiState.value = _uiState.value.copy(showInitialDownloadPrompt = false)
+        viewModelScope.launch {
+            settingsDataStore.setInitialDownloadPromptShown(true)
+        }
+    }
+
+    private suspend fun enabledCategories(): List<BlockCategory> {
+        val enabled = mutableListOf<BlockCategory>()
+        if (settingsDataStore.adultBlockEnabled.first()) enabled += BlockCategory.ADULT
+        if (settingsDataStore.malwareBlockEnabled.first()) enabled += BlockCategory.MALWARE
+        if (settingsDataStore.gamblingBlockEnabled.first()) enabled += BlockCategory.GAMBLING
+        if (settingsDataStore.socialMediaBlockEnabled.first()) enabled += BlockCategory.SOCIAL_MEDIA
+        return enabled
+    }
+
     private suspend fun downloadBlocklistsInternal(isInitialDownload: Boolean) {
         _uiState.value = _uiState.value.copy(
             isUpdatingBlocklists = true,
@@ -209,47 +237,60 @@ class HomeViewModel @Inject constructor(
         }
 
         try {
-            _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for adult content...")
-            record("Adult", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT))
+            // Only fetch the categories the user has enabled. A disabled
+            // category has no rules in effect, so reaching out to its
+            // upstream source would be unnecessary network activity.
+            val enabled = enabledCategories()
 
-            _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for malware...")
-            record("Malware", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE))
+            if (BlockCategory.ADULT in enabled) {
+                _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for adult content...")
+                record("Adult", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.ADULT))
+            }
+            if (BlockCategory.MALWARE in enabled) {
+                _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for malware...")
+                record("Malware", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.MALWARE))
+            }
+            if (BlockCategory.GAMBLING in enabled) {
+                _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for gambling...")
+                record("Gambling", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING))
+            }
+            if (BlockCategory.SOCIAL_MEDIA in enabled) {
+                _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for social media...")
+                record("Social Media", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA))
+            }
 
-            _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for gambling...")
-            record("Gambling", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.GAMBLING))
-
-            _uiState.value = _uiState.value.copy(updateStatus = "Downloading filter for social media...")
-            record("Social Media", blocklistDownloader.downloadAndSaveBlocklist(BlockCategory.SOCIAL_MEDIA))
-
+            val nothingEnabled = enabled.isEmpty()
             val anyFailed = failureLines.isNotEmpty()
             val anySucceeded = successLines.isNotEmpty()
             val title = when {
+                nothingEnabled -> "Nothing to Update"
                 !anySucceeded -> "Update Failed"
                 anyFailed -> "Update Incomplete"
                 else -> "Update Complete"
             }
             val message = buildString {
-                if (anySucceeded) {
-                    append("Downloaded $totalDomains domains\n")
-                    append(successLines.joinToString("\n"))
-                }
-                if (anyFailed) {
-                    if (isNotEmpty()) append("\n\n")
-                    append("Failed:\n")
-                    append(failureLines.joinToString("\n"))
-                }
-                if (!anySucceeded && !anyFailed) {
-                    append("No blocklists were updated.")
+                if (nothingEnabled) {
+                    append("All categories are disabled. Enable a category in Blocked Sites to download its rules.")
+                } else {
+                    if (anySucceeded) {
+                        append("Downloaded $totalDomains domains\n")
+                        append(successLines.joinToString("\n"))
+                    }
+                    if (anyFailed) {
+                        if (isNotEmpty()) append("\n\n")
+                        append("Failed:\n")
+                        append(failureLines.joinToString("\n"))
+                    }
                 }
             }
 
             _uiState.value = _uiState.value.copy(
                 isUpdatingBlocklists = false,
                 updateStatus = "",
-                showUpdateResult = !isInitialDownload || anyFailed,
+                showUpdateResult = !isInitialDownload || anyFailed || nothingEnabled,
                 updateResultTitle = title,
                 updateResultMessage = message,
-                updateResultIsError = !anySucceeded || anyFailed
+                updateResultIsError = nothingEnabled || !anySucceeded || anyFailed
             )
 
         } catch (e: Exception) {

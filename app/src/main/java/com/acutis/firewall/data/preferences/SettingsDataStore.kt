@@ -44,6 +44,7 @@ class SettingsDataStore @Inject constructor(
         private val AUTO_START_ENABLED = booleanPreferencesKey("auto_start_enabled")
         private val LOCKDOWN_MODE_DETECTED = booleanPreferencesKey("lockdown_mode_detected")
         private val DEFAULT_TIME_RULES_CREATED = booleanPreferencesKey("default_time_rules_created")
+        private val INITIAL_DOWNLOAD_PROMPT_SHOWN = booleanPreferencesKey("initial_download_prompt_shown")
         private const val PIN_HASH_KEY = "pin_hash"
     }
 
@@ -136,6 +137,16 @@ class SettingsDataStore @Inject constructor(
     suspend fun setDefaultTimeRulesCreated(created: Boolean) {
         dataStore.edit { prefs ->
             prefs[DEFAULT_TIME_RULES_CREATED] = created
+        }
+    }
+
+    suspend fun isInitialDownloadPromptShown(): Boolean {
+        return dataStore.data.first()[INITIAL_DOWNLOAD_PROMPT_SHOWN] ?: false
+    }
+
+    suspend fun setInitialDownloadPromptShown(shown: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[INITIAL_DOWNLOAD_PROMPT_SHOWN] = shown
         }
     }
 

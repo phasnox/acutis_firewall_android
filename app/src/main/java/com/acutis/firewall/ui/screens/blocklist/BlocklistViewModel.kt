@@ -2,6 +2,7 @@ package com.acutis.firewall.ui.screens.blocklist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.BlockedSite
 import com.acutis.firewall.data.db.entities.CustomBlocklist
@@ -28,7 +29,14 @@ data class BlocklistUiState(
     val selectedTab: Int = 0,
     val pinEnabled: Boolean = false,
     val showPinDialog: Boolean = false,
-    val pinError: Boolean = false
+    val pinError: Boolean = false,
+    val downloadingCategories: Set<BlockCategory> = emptySet(),
+    val downloadError: CategoryDownloadError? = null
+)
+
+data class CategoryDownloadError(
+    val category: BlockCategory,
+    val message: String
 )
 
 sealed class PendingAction {
@@ -46,7 +54,8 @@ sealed class PendingAction {
 class BlocklistViewModel @Inject constructor(
     private val blocklistRepository: BlocklistRepository,
     private val customBlocklistRepository: CustomBlocklistRepository,
-    private val settingsDataStore: SettingsDataStore
+    private val settingsDataStore: SettingsDataStore,
+    private val blocklistDownloader: BlocklistDownloader
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BlocklistUiState())
@@ -80,7 +89,7 @@ class BlocklistViewModel @Inject constructor(
                 countsFlow,
                 settingsFlow
             ) { customLists, counts, settings ->
-                BlocklistUiState(
+                _uiState.value.copy(
                     customLists = customLists,
                     adultEnabled = settings[0],
                     malwareEnabled = settings[1],
@@ -90,12 +99,7 @@ class BlocklistViewModel @Inject constructor(
                     malwareCount = counts[1],
                     gamblingCount = counts[2],
                     socialMediaCount = counts[3],
-                    showAddDialog = _uiState.value.showAddDialog,
-                    showAddListDialog = _uiState.value.showAddListDialog,
-                    selectedTab = _uiState.value.selectedTab,
-                    pinEnabled = settings[4],
-                    showPinDialog = _uiState.value.showPinDialog,
-                    pinError = _uiState.value.pinError
+                    pinEnabled = settings[4]
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -124,18 +128,30 @@ class BlocklistViewModel @Inject constructor(
                 is PendingAction.ToggleAdult -> {
                     settingsDataStore.setAdultBlockEnabled(action.enabled)
                     blocklistRepository.setCategoryEnabled(BlockCategory.ADULT, action.enabled)
+                    if (action.enabled && _uiState.value.adultCount == 0) {
+                        downloadCategory(BlockCategory.ADULT)
+                    }
                 }
                 is PendingAction.ToggleMalware -> {
                     settingsDataStore.setMalwareBlockEnabled(action.enabled)
                     blocklistRepository.setCategoryEnabled(BlockCategory.MALWARE, action.enabled)
+                    if (action.enabled && _uiState.value.malwareCount == 0) {
+                        downloadCategory(BlockCategory.MALWARE)
+                    }
                 }
                 is PendingAction.ToggleGambling -> {
                     settingsDataStore.setGamblingBlockEnabled(action.enabled)
                     blocklistRepository.setCategoryEnabled(BlockCategory.GAMBLING, action.enabled)
+                    if (action.enabled && _uiState.value.gamblingCount == 0) {
+                        downloadCategory(BlockCategory.GAMBLING)
+                    }
                 }
                 is PendingAction.ToggleSocialMedia -> {
                     settingsDataStore.setSocialMediaBlockEnabled(action.enabled)
                     blocklistRepository.setCategoryEnabled(BlockCategory.SOCIAL_MEDIA, action.enabled)
+                    if (action.enabled && _uiState.value.socialMediaCount == 0) {
+                        downloadCategory(BlockCategory.SOCIAL_MEDIA)
+                    }
                 }
                 is PendingAction.ToggleList -> {
                     customBlocklistRepository.toggleListEnabled(action.list.id, !action.list.isEnabled)
@@ -151,6 +167,27 @@ class BlocklistViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun downloadCategory(category: BlockCategory) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                downloadingCategories = _uiState.value.downloadingCategories + category
+            )
+            val result = blocklistDownloader.downloadAndSaveBlocklist(category)
+            _uiState.value = _uiState.value.copy(
+                downloadingCategories = _uiState.value.downloadingCategories - category,
+                downloadError = if (!result.success) {
+                    CategoryDownloadError(category, result.error ?: "download failed")
+                } else {
+                    _uiState.value.downloadError
+                }
+            )
+        }
+    }
+
+    fun dismissDownloadError() {
+        _uiState.value = _uiState.value.copy(downloadError = null)
     }
 
     private fun requestAction(action: PendingAction) {
