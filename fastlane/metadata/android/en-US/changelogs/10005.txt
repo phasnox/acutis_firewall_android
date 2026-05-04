@@ -1,0 +1,4 @@
+• Make blocklist downloads opt-in: no remote fetch on first launch
+• First launch now prompts before downloading blocklists
+• Update Blocklists only fetches categories you have enabled
+• Toggling a category on with no rules downloads just that category
