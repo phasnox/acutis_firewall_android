@@ -18,6 +18,7 @@ import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.data.repository.TimeRuleRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
@@ -48,6 +49,13 @@ class FirewallVpnService : VpnService() {
         const val ACTION_START = "com.acutis.firewall.START_VPN"
         const val ACTION_STOP = "com.acutis.firewall.STOP_VPN"
         const val ACTION_REFRESH_BLOCKLIST = "com.acutis.firewall.REFRESH_BLOCKLIST"
+
+        /**
+         * Set only by the in-app path that has already verified the PIN. Absent on
+         * the notification action, which is why the notification can no longer stop
+         * the firewall on its own.
+         */
+        const val EXTRA_PIN_VERIFIED = "com.acutis.firewall.EXTRA_PIN_VERIFIED"
         private const val NOTIFICATION_ID = 1
         private const val LOCKDOWN_WARNING_NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "firewall_channel"
@@ -81,7 +89,9 @@ class FirewallVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> startVpn()
-            ACTION_STOP -> stopVpn()
+            ACTION_STOP -> handleStopRequest(
+                intent?.getBooleanExtra(EXTRA_PIN_VERIFIED, false) ?: false
+            )
             ACTION_REFRESH_BLOCKLIST -> refreshBlocklist()
             null -> {
                 // Service was restarted by the system, check if we should be running
@@ -94,6 +104,33 @@ class FirewallVpnService : VpnService() {
             }
         }
         return START_STICKY
+    }
+
+    /**
+     * The notification's "Disable Firewall" action used to stop the VPN outright,
+     * which let a child kill every protection with one tap and no PIN. Gating here
+     * rather than in the notification's PendingIntent closes the hole for any caller.
+     */
+    private fun handleStopRequest(pinVerified: Boolean) {
+        if (pinVerified) {
+            stopVpn()
+            return
+        }
+        serviceScope.launch {
+            val pinEnabled = settingsDataStore.pinEnabled.first() && settingsDataStore.hasPin()
+            if (!pinEnabled) {
+                stopVpn()
+            } else {
+                Log.d(TAG, "Stop requested without PIN verification - prompting instead")
+                val intent = Intent(this@FirewallVpnService, MainActivity::class.java).apply {
+                    action = Intent.ACTION_MAIN
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra(MainActivity.EXTRA_REQUEST_DISABLE, true)
+                }
+                runCatching { startActivity(intent) }
+                    .onFailure { Log.w(TAG, "Could not open app for PIN entry", it) }
+            }
+        }
     }
 
     private fun startVpn() {

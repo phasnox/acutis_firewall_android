@@ -36,12 +36,21 @@ import com.acutis.firewall.ui.theme.FirewallColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    requestDisableFirewall: Boolean = false,
     onNavigateToBlocklist: () -> Unit,
     onNavigateToTimeRules: () -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Arrived from the notification's "Disable Firewall" action: run the normal
+    // toggle so the existing PIN prompt gates it.
+    LaunchedEffect(requestDisableFirewall) {
+        if (requestDisableFirewall && uiState.isFirewallEnabled) {
+            viewModel.onToggleFirewall()
+        }
+    }
 
     val vpnPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -134,6 +143,30 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(onClick = viewModel::dismissLockdownWarning) {
                     Text("Dismiss")
+                }
+            }
+        )
+    }
+
+    if (uiState.showUninstallProtectionRemovedAlert) {
+        val reAddAdminLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { viewModel.dismissUninstallProtectionRemovedAlert() }
+
+        AlertDialog(
+            onDismissRequest = viewModel::dismissUninstallProtectionRemovedAlert,
+            title = { Text(stringResource(R.string.uninstall_protection_removed_title)) },
+            text = { Text(stringResource(R.string.uninstall_protection_removed_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { reAddAdminLauncher.launch(viewModel.buildAddAdminIntent()) }
+                ) {
+                    Text(stringResource(R.string.uninstall_protection_turn_back_on))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissUninstallProtectionRemovedAlert) {
+                    Text(stringResource(R.string.dismiss))
                 }
             }
         )

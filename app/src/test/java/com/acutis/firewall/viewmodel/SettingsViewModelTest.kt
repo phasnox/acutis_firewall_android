@@ -3,6 +3,7 @@ package com.acutis.firewall.viewmodel
 import app.cash.turbine.test
 import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
+import com.acutis.firewall.admin.UninstallProtectionManager
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.ui.screens.settings.SettingsPendingAction
 import com.acutis.firewall.ui.screens.settings.SettingsViewModel
@@ -21,6 +22,7 @@ class SettingsViewModelTest {
 
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var blocklistDownloader: BlocklistDownloader
+    private lateinit var uninstallProtection: UninstallProtectionManager
     private lateinit var viewModel: SettingsViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -31,6 +33,8 @@ class SettingsViewModelTest {
 
         settingsDataStore = mockk(relaxed = true)
         blocklistDownloader = mockk(relaxed = true)
+        uninstallProtection = mockk(relaxed = true)
+        every { uninstallProtection.isProtectionActive() } returns false
 
         every { settingsDataStore.pinEnabled } returns flowOf(false)
         every { settingsDataStore.autoStartEnabled } returns flowOf(true)
@@ -43,7 +47,7 @@ class SettingsViewModelTest {
     }
 
     private fun createViewModel(): SettingsViewModel {
-        return SettingsViewModel(settingsDataStore, blocklistDownloader)
+        return SettingsViewModel(settingsDataStore, blocklistDownloader, uninstallProtection)
     }
 
     @Test
@@ -351,6 +355,129 @@ class SettingsViewModelTest {
         viewModel.uiState.test {
             val state = awaitItem()
             assertThat(state.lastDownloadResult).isNull()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // ---- Uninstall protection ----
+
+    @Test
+    fun `enabling uninstall protection without a pin prompts to set one`() = runTest {
+        every { settingsDataStore.hasPin() } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onUninstallProtectionToggle(true)
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            assertThat(awaitItem().showUninstallProtectionNeedsPinDialog).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `disabling uninstall protection asks for the pin`() = runTest {
+        every { settingsDataStore.hasPin() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onUninstallProtectionToggle(false)
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.showPinVerifyDialog).isTrue()
+            assertThat(state.pendingAction)
+                .isEqualTo(SettingsPendingAction.DISABLE_UNINSTALL_PROTECTION)
+            cancelAndIgnoreRemainingEvents()
+        }
+        verify(exactly = 0) { uninstallProtection.disableProtection() }
+    }
+
+    @Test
+    fun `correct pin removes the admin and flags the removal as self-initiated first`() = runTest {
+        every { settingsDataStore.hasPin() } returns true
+        every { settingsDataStore.verifyPin("1234") } returns true
+        every { uninstallProtection.disableProtection() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onUninstallProtectionToggle(false)
+        viewModel.onPinVerified("1234")
+        advanceUntilIdle()
+
+        // Ordering is the point: if the admin were removed first, onDisabled could
+        // arrive before the flag was persisted and report the parent as a tamperer.
+        coVerifyOrder {
+            settingsDataStore.setUninstallProtectionSelfDisable(true)
+            uninstallProtection.disableProtection()
+        }
+    }
+
+    @Test
+    fun `wrong pin does not remove the admin`() = runTest {
+        every { settingsDataStore.hasPin() } returns true
+        every { settingsDataStore.verifyPin(any()) } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onUninstallProtectionToggle(false)
+        viewModel.onPinVerified("0000")
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            assertThat(awaitItem().pinError).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+        verify(exactly = 0) { uninstallProtection.disableProtection() }
+    }
+
+    @Test
+    fun `disabling with no pin set is ungated so a data wipe cannot strand the parent`() = runTest {
+        // Clearing app data wipes the PIN but leaves the admin registered.
+        every { settingsDataStore.hasPin() } returns false
+        every { uninstallProtection.disableProtection() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onUninstallProtectionToggle(false)
+        advanceUntilIdle()
+
+        verify { uninstallProtection.disableProtection() }
+        viewModel.uiState.test {
+            assertThat(awaitItem().showPinVerifyDialog).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `failed removal surfaces an error and clears the self-disable flag`() = runTest {
+        every { settingsDataStore.hasPin() } returns false
+        every { uninstallProtection.disableProtection() } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onUninstallProtectionToggle(false)
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            assertThat(awaitItem().uninstallProtectionError).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+        coVerify { settingsDataStore.setUninstallProtectionSelfDisable(false) }
+    }
+
+    @Test
+    fun `refresh reads protection state from the platform not the datastore`() = runTest {
+        every { uninstallProtection.isProtectionActive() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.refreshUninstallProtectionState()
+
+        viewModel.uiState.test {
+            assertThat(awaitItem().isUninstallProtectionActive).isTrue()
             cancelAndIgnoreRemainingEvents()
         }
     }

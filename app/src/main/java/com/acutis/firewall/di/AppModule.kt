@@ -1,5 +1,6 @@
 package com.acutis.firewall.di
 
+import android.app.admin.DevicePolicyManager
 import android.content.Context
 import androidx.room.Room
 import androidx.work.WorkManager
@@ -54,6 +55,14 @@ object AppModule {
     @Singleton
     fun provideCustomBlocklistDao(database: AppDatabase): CustomBlocklistDao {
         return database.customBlocklistDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideDevicePolicyManager(
+        @ApplicationContext context: Context
+    ): DevicePolicyManager {
+        return context.getSystemService(DevicePolicyManager::class.java)
     }
 
     @Provides

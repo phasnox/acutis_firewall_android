@@ -6,6 +6,7 @@ import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.TimeRule
 import com.acutis.firewall.data.db.entities.TimeRuleAction
+import com.acutis.firewall.admin.UninstallProtectionManager
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.data.repository.BlocklistRepository
 import com.acutis.firewall.data.repository.TimeRuleRepository
@@ -30,6 +31,7 @@ class HomeViewModelTest {
     private lateinit var blocklistRepository: BlocklistRepository
     private lateinit var blocklistDownloader: BlocklistDownloader
     private lateinit var timeRuleRepository: TimeRuleRepository
+    private lateinit var uninstallProtection: UninstallProtectionManager
     private lateinit var viewModel: HomeViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -43,10 +45,13 @@ class HomeViewModelTest {
         blocklistRepository = mockk(relaxed = true)
         blocklistDownloader = mockk(relaxed = true)
         timeRuleRepository = mockk(relaxed = true)
+        uninstallProtection = mockk(relaxed = true)
+        every { uninstallProtection.isProtectionActive() } returns false
 
         every { settingsDataStore.firewallEnabled } returns flowOf(false)
         every { settingsDataStore.pinEnabled } returns flowOf(false)
         every { settingsDataStore.lockdownModeDetected } returns flowOf(false)
+        every { settingsDataStore.uninstallProtectionRemoved } returns flowOf(false)
         every { settingsDataStore.adultBlockEnabled } returns flowOf(true)
         every { settingsDataStore.malwareBlockEnabled } returns flowOf(true)
         every { settingsDataStore.gamblingBlockEnabled } returns flowOf(false)
@@ -77,7 +82,7 @@ class HomeViewModelTest {
     }
 
     private fun createViewModel(): HomeViewModel {
-        return HomeViewModel(application, settingsDataStore, blocklistRepository, blocklistDownloader, timeRuleRepository)
+        return HomeViewModel(application, settingsDataStore, blocklistRepository, blocklistDownloader, timeRuleRepository, uninstallProtection)
     }
 
     @Test
@@ -714,5 +719,70 @@ class HomeViewModelTest {
         // Then - toggling should be cleared
         assertThat(viewModel.uiState.value.isTogglingFirewall).isFalse()
         assertThat(viewModel.uiState.value.isFirewallEnabled).isFalse()
+    }
+
+    // ---- Uninstall protection tamper alert ----
+
+    @Test
+    fun `tamper flag surfaces the removed-protection alert`() = runTest {
+        every { settingsDataStore.uninstallProtectionRemoved } returns flowOf(true)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            assertThat(awaitItem().showUninstallProtectionRemovedAlert).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `no tamper alert when protection was not removed`() = runTest {
+        every { settingsDataStore.uninstallProtectionRemoved } returns flowOf(false)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            assertThat(awaitItem().showUninstallProtectionRemovedAlert).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `dismissing the tamper alert does not clear the persisted flag`() = runTest {
+        // Otherwise a child could remove protection, dismiss the dialog, and hide it.
+        every { settingsDataStore.uninstallProtectionRemoved } returns flowOf(true)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.dismissUninstallProtectionRemovedAlert()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { settingsDataStore.setUninstallProtectionRemoved(false) }
+        viewModel.uiState.test {
+            assertThat(awaitItem().showUninstallProtectionRemovedAlert).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `admin active with no pin is treated as cleared app data`() = runTest {
+        // Clearing storage wipes the PIN but leaves the admin registered - the one
+        // tamper route device admin itself cannot block.
+        every { uninstallProtection.isProtectionActive() } returns true
+        every { settingsDataStore.hasPin() } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        coVerify { settingsDataStore.setUninstallProtectionRemoved(true) }
+    }
+
+    @Test
+    fun `admin active with a pin intact is not treated as tampering`() = runTest {
+        every { uninstallProtection.isProtectionActive() } returns true
+        every { settingsDataStore.hasPin() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { settingsDataStore.setUninstallProtectionRemoved(true) }
     }
 }

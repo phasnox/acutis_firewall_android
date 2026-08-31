@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Deliberately requests no policies.
+
+    Blocking uninstall is a consequence of being an *active* device admin; it does
+    not require any <uses-policies> entry. Keeping the set empty means the system
+    activation screen lists no capabilities ("erase all data", "lock the screen",
+    "set password rules"), which is both honest - we never use them - and far less
+    alarming for the parent granting it.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies />
+</device-admin>

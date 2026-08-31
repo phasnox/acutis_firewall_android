@@ -1,7 +1,9 @@
 package com.acutis.firewall.ui.screens.settings
 
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.acutis.firewall.admin.UninstallProtectionManager
 import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.preferences.SettingsDataStore
@@ -19,6 +21,9 @@ data class SettingsUiState(
     val showPinVerifyDialog: Boolean = false,
     val pinError: Boolean = false,
     val pendingAction: SettingsPendingAction? = null,
+    val isUninstallProtectionActive: Boolean = false,
+    val showUninstallProtectionNeedsPinDialog: Boolean = false,
+    val uninstallProtectionError: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadProgress: String = "",
     val lastDownloadResult: String? = null
@@ -26,13 +31,15 @@ data class SettingsUiState(
 
 enum class SettingsPendingAction {
     DISABLE_PIN,
-    CHANGE_PIN
+    CHANGE_PIN,
+    DISABLE_UNINSTALL_PROTECTION
 }
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
-    private val blocklistDownloader: BlocklistDownloader
+    private val blocklistDownloader: BlocklistDownloader,
+    private val uninstallProtection: UninstallProtectionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -53,6 +60,74 @@ class SettingsViewModel @Inject constructor(
                 _uiState.value = state
             }
         }
+        refreshUninstallProtectionState()
+    }
+
+    /**
+     * The platform, not our DataStore, is the source of truth: the admin can be
+     * revoked from system Settings without the app running. Called from the screen
+     * on every resume.
+     */
+    fun refreshUninstallProtectionState() {
+        val active = uninstallProtection.isProtectionActive()
+        if (active) {
+            // Idempotent, and a no-op unless the device was provisioned as device
+            // owner via the documented adb setup.
+            uninstallProtection.applyDeviceOwnerHardening()
+        }
+        _uiState.value = _uiState.value.copy(isUninstallProtectionActive = active)
+    }
+
+    fun buildAddAdminIntent(): Intent = uninstallProtection.buildAddAdminIntent()
+
+    fun onUninstallProtectionToggle(enabled: Boolean) {
+        if (enabled) {
+            // Enabling is never PIN-gated, matching onPinToggle and onToggleFirewall.
+            // The screen launches the system activation screen; we only block the
+            // case where there is no PIN to unlock it with later.
+            if (!settingsDataStore.hasPin()) {
+                _uiState.value = _uiState.value.copy(showUninstallProtectionNeedsPinDialog = true)
+            }
+            return
+        }
+
+        // Recovery path: clearing app data wipes the PIN but the admin registration
+        // survives in system state. Without this the parent is left with an active
+        // admin, no PIN, and no way to remove the app.
+        if (!settingsDataStore.hasPin()) {
+            disableUninstallProtectionInternal()
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(
+            showPinVerifyDialog = true,
+            pendingAction = SettingsPendingAction.DISABLE_UNINSTALL_PROTECTION
+        )
+    }
+
+    private fun disableUninstallProtectionInternal() {
+        viewModelScope.launch {
+            // Awaited before removeActiveAdmin so onDisabled cannot fire first and
+            // report the parent's own removal as tampering.
+            settingsDataStore.setUninstallProtectionSelfDisable(true)
+
+            val removed = uninstallProtection.disableProtection()
+            settingsDataStore.setUninstallProtectionEnabled(false)
+
+            if (!removed) {
+                settingsDataStore.setUninstallProtectionSelfDisable(false)
+                _uiState.value = _uiState.value.copy(uninstallProtectionError = true)
+            }
+            refreshUninstallProtectionState()
+        }
+    }
+
+    fun dismissUninstallProtectionNeedsPinDialog() {
+        _uiState.value = _uiState.value.copy(showUninstallProtectionNeedsPinDialog = false)
+    }
+
+    fun clearUninstallProtectionError() {
+        _uiState.value = _uiState.value.copy(uninstallProtectionError = false)
     }
 
     fun onPinToggle(enabled: Boolean) {
@@ -104,6 +179,9 @@ class SettingsViewModel @Inject constructor(
                 }
                 SettingsPendingAction.CHANGE_PIN -> {
                     _uiState.value = _uiState.value.copy(showPinSetupDialog = true)
+                }
+                SettingsPendingAction.DISABLE_UNINSTALL_PROTECTION -> {
+                    disableUninstallProtectionInternal()
                 }
                 null -> {}
             }

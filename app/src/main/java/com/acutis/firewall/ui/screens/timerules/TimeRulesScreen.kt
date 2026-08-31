@@ -23,6 +23,7 @@ import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.CustomBlocklist
 import com.acutis.firewall.data.db.entities.TimeRule
 import com.acutis.firewall.data.db.entities.TimeRuleAction
+import com.acutis.firewall.ui.components.PinDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +33,14 @@ fun TimeRulesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val newRuleData by viewModel.newRuleData.collectAsState()
+
+    if (uiState.showPinDialog) {
+        PinDialog(
+            onDismiss = viewModel::onPinDialogDismiss,
+            onPinEntered = viewModel::onPinEntered,
+            isError = uiState.pinError
+        )
+    }
 
     if (uiState.showAddDialog) {
         AddEditRuleDialog(

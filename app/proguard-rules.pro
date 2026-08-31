@@ -18,3 +18,8 @@
 -dontwarn com.google.errorprone.annotations.concurrent.LazyInit
 -dontwarn javax.annotation.Nullable
 -dontwarn javax.annotation.concurrent.GuardedBy
+
+# Keep the device admin receiver: referenced from AndroidManifest and dispatched to
+# by the platform. If R8 renames it the admin component no longer resolves and
+# uninstall protection silently stops working.
+-keep class com.acutis.firewall.admin.UninstallProtectionAdminReceiver { *; }

@@ -6,6 +6,7 @@ import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.CustomBlocklist
 import com.acutis.firewall.data.db.entities.TimeRule
 import com.acutis.firewall.data.db.entities.TimeRuleAction
+import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.data.repository.CustomBlocklistRepository
 import com.acutis.firewall.data.repository.TimeRuleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,8 +18,17 @@ data class TimeRulesUiState(
     val rules: List<TimeRule> = emptyList(),
     val customLists: List<CustomBlocklist> = emptyList(),
     val showAddDialog: Boolean = false,
-    val editingRule: TimeRule? = null
+    val editingRule: TimeRule? = null,
+    val pinEnabled: Boolean = false,
+    val showPinDialog: Boolean = false,
+    val pinError: Boolean = false,
+    val pendingAction: TimeRulePendingAction? = null
 )
+
+sealed class TimeRulePendingAction {
+    data class Delete(val rule: TimeRule) : TimeRulePendingAction()
+    data class Toggle(val rule: TimeRule) : TimeRulePendingAction()
+}
 
 enum class TargetType {
     DOMAIN,
@@ -49,7 +59,8 @@ enum class RuleType {
 @HiltViewModel
 class TimeRulesViewModel @Inject constructor(
     private val timeRuleRepository: TimeRuleRepository,
-    private val customBlocklistRepository: CustomBlocklistRepository
+    private val customBlocklistRepository: CustomBlocklistRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimeRulesUiState())
@@ -62,11 +73,13 @@ class TimeRulesViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 timeRuleRepository.getAllRules(),
-                customBlocklistRepository.getAllLists()
-            ) { rules, customLists ->
+                customBlocklistRepository.getAllLists(),
+                settingsDataStore.pinEnabled
+            ) { rules, customLists, pinEnabled ->
                 _uiState.value.copy(
                     rules = rules,
-                    customLists = customLists
+                    customLists = customLists,
+                    pinEnabled = pinEnabled
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -161,15 +174,61 @@ class TimeRulesViewModel @Inject constructor(
         }
     }
 
-    fun deleteRule(rule: TimeRule) {
-        viewModelScope.launch {
-            timeRuleRepository.deleteRule(rule)
+    /**
+     * Only weakening a rule needs the PIN - deleting one, or switching an active rule
+     * off. Adding or tightening stays ungated, matching HomeViewModel.onToggleFirewall
+     * and BlocklistViewModel.requiresPinForAction.
+     */
+    private fun requiresPin(action: TimeRulePendingAction): Boolean {
+        if (!_uiState.value.pinEnabled || !settingsDataStore.hasPin()) return false
+        return when (action) {
+            is TimeRulePendingAction.Delete -> true
+            is TimeRulePendingAction.Toggle -> action.rule.isEnabled
         }
     }
 
-    fun toggleRule(rule: TimeRule) {
-        viewModelScope.launch {
-            timeRuleRepository.setRuleEnabled(rule.id, !rule.isEnabled)
+    private fun requestAction(action: TimeRulePendingAction) {
+        if (requiresPin(action)) {
+            _uiState.value = _uiState.value.copy(showPinDialog = true, pendingAction = action)
+        } else {
+            executeAction(action)
         }
+    }
+
+    private fun executeAction(action: TimeRulePendingAction) {
+        viewModelScope.launch {
+            when (action) {
+                is TimeRulePendingAction.Delete ->
+                    timeRuleRepository.deleteRule(action.rule)
+                is TimeRulePendingAction.Toggle ->
+                    timeRuleRepository.setRuleEnabled(action.rule.id, !action.rule.isEnabled)
+            }
+        }
+    }
+
+    fun deleteRule(rule: TimeRule) = requestAction(TimeRulePendingAction.Delete(rule))
+
+    fun toggleRule(rule: TimeRule) = requestAction(TimeRulePendingAction.Toggle(rule))
+
+    fun onPinEntered(pin: String) {
+        if (settingsDataStore.verifyPin(pin)) {
+            val action = _uiState.value.pendingAction
+            _uiState.value = _uiState.value.copy(
+                showPinDialog = false,
+                pinError = false,
+                pendingAction = null
+            )
+            action?.let { executeAction(it) }
+        } else {
+            _uiState.value = _uiState.value.copy(pinError = true)
+        }
+    }
+
+    fun onPinDialogDismiss() {
+        _uiState.value = _uiState.value.copy(
+            showPinDialog = false,
+            pinError = false,
+            pendingAction = null
+        )
     }
 }

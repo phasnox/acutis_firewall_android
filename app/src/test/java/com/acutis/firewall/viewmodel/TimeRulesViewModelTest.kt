@@ -5,6 +5,7 @@ import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.CustomBlocklist
 import com.acutis.firewall.data.db.entities.TimeRule
 import com.acutis.firewall.data.db.entities.TimeRuleAction
+import com.acutis.firewall.data.preferences.SettingsDataStore
 import com.acutis.firewall.data.repository.CustomBlocklistRepository
 import com.acutis.firewall.data.repository.TimeRuleRepository
 import com.acutis.firewall.ui.screens.timerules.*
@@ -23,6 +24,7 @@ class TimeRulesViewModelTest {
 
     private lateinit var timeRuleRepository: TimeRuleRepository
     private lateinit var customBlocklistRepository: CustomBlocklistRepository
+    private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var viewModel: TimeRulesViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -43,6 +45,9 @@ class TimeRulesViewModelTest {
 
         timeRuleRepository = mockk(relaxed = true)
         customBlocklistRepository = mockk(relaxed = true)
+        settingsDataStore = mockk(relaxed = true)
+        every { settingsDataStore.pinEnabled } returns flowOf(false)
+        every { settingsDataStore.hasPin() } returns false
 
         every { timeRuleRepository.getAllRules() } returns flowOf(testRules)
         every { customBlocklistRepository.getAllLists() } returns flowOf(testCustomLists)
@@ -54,7 +59,7 @@ class TimeRulesViewModelTest {
     }
 
     private fun createViewModel(): TimeRulesViewModel {
-        return TimeRulesViewModel(timeRuleRepository, customBlocklistRepository)
+        return TimeRulesViewModel(timeRuleRepository, customBlocklistRepository, settingsDataStore)
     }
 
     @Test
@@ -502,5 +507,70 @@ class TimeRulesViewModelTest {
             assertThat(state.showAddDialog).isFalse()
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    // ---- PIN gating ----
+
+    @Test
+    fun `deleting a rule asks for the pin when protection is on`() = runTest {
+        every { settingsDataStore.pinEnabled } returns flowOf(true)
+        every { settingsDataStore.hasPin() } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.deleteRule(testRules.first())
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            assertThat(awaitItem().showPinDialog).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+        coVerify(exactly = 0) { timeRuleRepository.deleteRule(any()) }
+    }
+
+    @Test
+    fun `correct pin deletes the rule`() = runTest {
+        every { settingsDataStore.pinEnabled } returns flowOf(true)
+        every { settingsDataStore.hasPin() } returns true
+        every { settingsDataStore.verifyPin("1234") } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.deleteRule(testRules.first())
+        viewModel.onPinEntered("1234")
+        advanceUntilIdle()
+
+        coVerify { timeRuleRepository.deleteRule(testRules.first()) }
+    }
+
+    @Test
+    fun `wrong pin does not delete the rule`() = runTest {
+        every { settingsDataStore.pinEnabled } returns flowOf(true)
+        every { settingsDataStore.hasPin() } returns true
+        every { settingsDataStore.verifyPin(any()) } returns false
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.deleteRule(testRules.first())
+        viewModel.onPinEntered("0000")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { timeRuleRepository.deleteRule(any()) }
+        viewModel.uiState.test {
+            assertThat(awaitItem().pinError).isTrue()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `deleting a rule is ungated when pin protection is off`() = runTest {
+        every { settingsDataStore.pinEnabled } returns flowOf(false)
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.deleteRule(testRules.first())
+        advanceUntilIdle()
+
+        coVerify { timeRuleRepository.deleteRule(testRules.first()) }
     }
 }

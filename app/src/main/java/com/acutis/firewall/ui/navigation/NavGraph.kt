@@ -26,7 +26,8 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Screen.Home.route
+    startDestination: String = Screen.Home.route,
+    requestDisableFirewall: Boolean = false
 ) {
     NavHost(
         navController = navController,
@@ -34,6 +35,7 @@ fun NavGraph(
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
+                requestDisableFirewall = requestDisableFirewall,
                 onNavigateToBlocklist = {
                     navController.navigate(Screen.Blocklist.route)
                 },
