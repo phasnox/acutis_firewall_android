@@ -45,6 +45,9 @@ class SettingsDataStore @Inject constructor(
         private val LOCKDOWN_MODE_DETECTED = booleanPreferencesKey("lockdown_mode_detected")
         private val DEFAULT_TIME_RULES_CREATED = booleanPreferencesKey("default_time_rules_created")
         private val INITIAL_DOWNLOAD_PROMPT_SHOWN = booleanPreferencesKey("initial_download_prompt_shown")
+        private val UNINSTALL_PROTECTION_ENABLED = booleanPreferencesKey("uninstall_protection_enabled")
+        private val UNINSTALL_PROTECTION_REMOVED = booleanPreferencesKey("uninstall_protection_removed")
+        private val UNINSTALL_PROTECTION_SELF_DISABLE = booleanPreferencesKey("uninstall_protection_self_disable")
         private const val PIN_HASH_KEY = "pin_hash"
     }
 
@@ -78,6 +81,15 @@ class SettingsDataStore @Inject constructor(
 
     val lockdownModeDetected: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[LOCKDOWN_MODE_DETECTED] ?: false
+    }
+
+    val uninstallProtectionEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[UNINSTALL_PROTECTION_ENABLED] ?: false
+    }
+
+    /** Set when the device admin was removed WITHOUT the PIN - i.e. tampering. */
+    val uninstallProtectionRemoved: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[UNINSTALL_PROTECTION_REMOVED] ?: false
     }
 
     suspend fun isFirewallEnabled(): Boolean = firewallEnabled.first()
@@ -137,6 +149,33 @@ class SettingsDataStore @Inject constructor(
     suspend fun setDefaultTimeRulesCreated(created: Boolean) {
         dataStore.edit { prefs ->
             prefs[DEFAULT_TIME_RULES_CREATED] = created
+        }
+    }
+
+    suspend fun setUninstallProtectionEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[UNINSTALL_PROTECTION_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setUninstallProtectionRemoved(removed: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[UNINSTALL_PROTECTION_REMOVED] = removed
+        }
+    }
+
+    /**
+     * Marks a removal as parent-initiated so the admin receiver does not raise a
+     * tamper alert for it. Must be written AND awaited before removeActiveAdmin() -
+     * onDisabled can arrive the instant that call returns.
+     */
+    suspend fun isUninstallProtectionSelfDisable(): Boolean {
+        return dataStore.data.first()[UNINSTALL_PROTECTION_SELF_DISABLE] ?: false
+    }
+
+    suspend fun setUninstallProtectionSelfDisable(value: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[UNINSTALL_PROTECTION_SELF_DISABLE] = value
         }
     }
 

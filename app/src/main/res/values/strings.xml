@@ -38,4 +38,24 @@
     <string name="save">Save</string>
     <string name="delete">Delete</string>
     <string name="home">Home</string>
+
+    <!-- Uninstall protection -->
+    <string name="device_admin_label">Acutis Firewall uninstall protection</string>
+    <string name="device_admin_description">Prevents this app from being uninstalled without the parent PIN. Acutis Firewall does not use any other device administration capability.</string>
+    <string name="uninstall_protection">Uninstall protection</string>
+    <string name="uninstall_protection_summary">Stop this app being uninstalled without the PIN</string>
+    <string name="uninstall_protection_explanation">Acutis Firewall needs device administrator access so it cannot be uninstalled without your PIN. It will not lock your screen, change your password, or erase any data.</string>
+    <string name="uninstall_protection_needs_pin_title">Set a PIN first</string>
+    <string name="uninstall_protection_needs_pin_message">Uninstall protection is unlocked with your parent PIN. Set a PIN before turning it on.</string>
+    <string name="uninstall_protection_disable_warning">Removing this lets Acutis Firewall be uninstalled, and a parent will be notified. To remove it properly, open Acutis Firewall and enter the parent PIN in Settings.</string>
+    <string name="uninstall_protection_gate_title">Ask a parent</string>
+    <string name="uninstall_protection_gate_message">Enter the parent PIN to remove uninstall protection.</string>
+    <string name="uninstall_protection_removed_title">Uninstall protection was removed</string>
+    <string name="uninstall_protection_removed_message">Someone turned off device administrator access for Acutis Firewall, so the app can now be uninstalled. Turn protection back on to keep it in place.</string>
+    <string name="uninstall_protection_turn_back_on">Turn back on</string>
+    <string name="uninstall_protection_unavailable">This device does not support uninstall protection.</string>
+    <string name="uninstall_protection_disable_failed">Could not turn off uninstall protection. Remove it from Settings &gt; Security &gt; Device admin apps.</string>
+    <string name="incorrect_pin_attempts_left">Incorrect PIN \u2013 %1$d attempts left</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="pin_required_to_change">PIN required to change this</string>
 </resources>

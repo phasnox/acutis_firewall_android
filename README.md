@@ -44,6 +44,14 @@ A parental control Android app that blocks adult and dangerous content using a l
 - Secure settings with a 4-digit PIN
 - PIN required to disable blocking or modify settings
 - Enabling protections does not require PIN (only disabling)
+- PIN also gates the notification's "Disable Firewall" action and time-rule changes
+
+### Uninstall Protection
+- Optional device-administrator registration blocks uninstall at the OS level
+- Deactivating it prompts for the parent PIN, and alerts if removed anyway
+- Detects the one route it cannot block: clearing app storage wipes the PIN
+- Optional Device Owner setup for genuinely unremovable protection
+- See [UNINSTALL-PROTECTION.md](UNINSTALL-PROTECTION.md)
 
 ## Screenshots
 

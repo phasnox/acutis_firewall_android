@@ -1,5 +1,7 @@
 package com.acutis.firewall.ui.screens.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +16,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.acutis.firewall.R
 import com.acutis.firewall.ui.components.PinDialog
 import com.acutis.firewall.ui.components.PinSetupDialog
@@ -25,6 +30,47 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    val addAdminLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Deliberately ignores resultCode: several OEMs return RESULT_CANCELED even
+        // when the admin was activated. Ask the platform instead.
+        viewModel.refreshUninstallProtectionState()
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshUninstallProtectionState()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (uiState.showUninstallProtectionNeedsPinDialog) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissUninstallProtectionNeedsPinDialog,
+            title = { Text(stringResource(R.string.uninstall_protection_needs_pin_title)) },
+            text = { Text(stringResource(R.string.uninstall_protection_needs_pin_message)) },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissUninstallProtectionNeedsPinDialog) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (uiState.uninstallProtectionError) {
+        AlertDialog(
+            onDismissRequest = viewModel::clearUninstallProtectionError,
+            title = { Text(stringResource(R.string.uninstall_protection)) },
+            text = { Text(stringResource(R.string.uninstall_protection_disable_failed)) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearUninstallProtectionError) { Text("OK") }
+            }
+        )
+    }
 
     if (uiState.showPinSetupDialog) {
         PinSetupDialog(
@@ -116,6 +162,22 @@ fun SettingsScreen(
                         onClick = viewModel::onChangePin
                     )
                 }
+            }
+
+            item {
+                SettingsSwitchItem(
+                    icon = Icons.Default.AdminPanelSettings,
+                    title = stringResource(R.string.uninstall_protection),
+                    description = stringResource(R.string.uninstall_protection_summary),
+                    checked = uiState.isUninstallProtectionActive,
+                    onCheckedChange = { enabled ->
+                        if (enabled && uiState.hasPin) {
+                            addAdminLauncher.launch(viewModel.buildAddAdminIntent())
+                        } else {
+                            viewModel.onUninstallProtectionToggle(enabled)
+                        }
+                    }
+                )
             }
 
             item {

@@ -7,6 +7,8 @@ import android.net.NetworkCapabilities
 import android.net.VpnService
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.acutis.firewall.admin.UninstallProtectionManager
+import com.acutis.firewall.admin.UninstallProtectionNotifier
 import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.TimeRuleAction
@@ -34,6 +36,7 @@ data class HomeUiState(
     val updateResultIsError: Boolean = false,
     val showVpnConflictAlert: Boolean = false,
     val showLockdownWarning: Boolean = false,
+    val showUninstallProtectionRemovedAlert: Boolean = false,
     val isTogglingFirewall: Boolean = false,
     val showInitialDownloadPrompt: Boolean = false
 )
@@ -48,11 +51,20 @@ class HomeViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val blocklistRepository: BlocklistRepository,
     private val blocklistDownloader: BlocklistDownloader,
-    private val timeRuleRepository: TimeRuleRepository
+    private val timeRuleRepository: TimeRuleRepository,
+    private val uninstallProtection: UninstallProtectionManager
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    /**
+     * Session-only. Unlike the lockdown warning, dismissing a tamper alert must not
+     * clear the persisted flag - otherwise a child can remove protection, dismiss the
+     * dialog, and hide the evidence. It reappears every launch until protection is
+     * actually restored.
+     */
+    private var tamperAlertDismissedThisSession = false
 
     init {
         viewModelScope.launch {
@@ -60,20 +72,25 @@ class HomeViewModel @Inject constructor(
                 settingsDataStore.firewallEnabled,
                 settingsDataStore.pinEnabled,
                 blocklistRepository.getEnabledCount(),
-                settingsDataStore.lockdownModeDetected
-            ) { firewallEnabled, pinEnabled, blockedCount, lockdownDetected ->
+                settingsDataStore.lockdownModeDetected,
+                settingsDataStore.uninstallProtectionRemoved
+            ) { firewallEnabled, pinEnabled, blockedCount, lockdownDetected, protectionRemoved ->
                 // Clear toggling state when firewall state changes
                 _uiState.value.copy(
                     isFirewallEnabled = firewallEnabled,
                     isPinEnabled = pinEnabled,
                     blockedSitesCount = blockedCount,
                     showLockdownWarning = lockdownDetected,
+                    showUninstallProtectionRemovedAlert =
+                        protectionRemoved && !tamperAlertDismissedThisSession,
                     isTogglingFirewall = false
                 )
             }.collect { state ->
                 _uiState.value = state
             }
         }
+
+        detectClearedAppData()
 
         // First launch: ask the user before reaching out to remote blocklist
         // sources. We only consider it "first launch" if the prompt has never
@@ -95,6 +112,27 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Clearing app storage wipes the PIN and every setting, but the device admin
+     * registration lives in system state and survives. Admin active with no PIN is
+     * therefore a reliable "someone wiped the data" signal - the one tamper route
+     * device admin cannot itself block.
+     */
+    private fun detectClearedAppData() {
+        if (!uninstallProtection.isProtectionActive() || settingsDataStore.hasPin()) return
+        viewModelScope.launch {
+            settingsDataStore.setUninstallProtectionRemoved(true)
+            UninstallProtectionNotifier.showTamperAlert(application.applicationContext)
+        }
+    }
+
+    fun dismissUninstallProtectionRemovedAlert() {
+        tamperAlertDismissedThisSession = true
+        _uiState.value = _uiState.value.copy(showUninstallProtectionRemovedAlert = false)
+    }
+
+    fun buildAddAdminIntent(): Intent = uninstallProtection.buildAddAdminIntent()
 
     private suspend fun createDefaultTimeRules() {
         // Create a default rule: Allow social media for 30 minutes per day (disabled by default)
@@ -154,6 +192,8 @@ class HomeViewModel @Inject constructor(
 
         if (_uiState.value.isFirewallEnabled) {
             intent.action = FirewallVpnService.ACTION_STOP
+            // Reaching here means the PIN was verified (or none is set).
+            intent.putExtra(FirewallVpnService.EXTRA_PIN_VERIFIED, true)
             context.startService(intent)
         } else {
             intent.action = FirewallVpnService.ACTION_START
