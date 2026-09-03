@@ -1,0 +1,6 @@
+• New: uninstall protection - stops the app being uninstalled without the parent PIN
+• Removing protection now asks for the PIN, and alerts you if it is removed anyway
+• Detects when app storage has been cleared, which wipes the PIN
+• Fix: the notification's "Disable Firewall" action no longer bypasses the PIN
+• Time rules now require the PIN to delete or turn off
+• Settings now shows the real app version
