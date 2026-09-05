@@ -47,6 +47,10 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Several JUnit 5 jars reach the androidTest classpath transitively and
+            // each ships these, which fails mergeDebugAndroidTestJavaResource. They
+            // are not in the release APK, so excluding them is a no-op there.
+            excludes += "/META-INF/{LICENSE.md,LICENSE-notice.md,NOTICE.md}"
         }
     }
 
