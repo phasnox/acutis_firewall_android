@@ -141,29 +141,50 @@ class UninstallProtectionInstrumentedTest {
     }
 
     /**
-     * Opens the screen via `am start` from shell rather than context.startActivity.
+     * Reaches the deactivate screen through the device admin list.
      *
-     * Two reasons. First, a backgrounded app cannot start an activity on API 29+, so
-     * the previous context.startActivity was itself being blocked. Second, and more
-     * important for validity: routing through our own app would leave it recently
-     * foregrounded, and background-activity-launch rules grant a ~10s grace period to
-     * an app that was just in front. That would let the PIN gate appear here for a
-     * reason it would not in reality, where the child walks into Settings from the
-     * launcher with our app long since backgrounded.
+     * DeviceAdminAdd cannot be launched by intent from shell: `am start` always adds
+     * FLAG_ACTIVITY_NEW_TASK and the activity refuses it outright, logging
+     * "Cannot start ADD_DEVICE_ADMIN as a new task" and finishing. It has to be entered
+     * from inside Settings' own task - which is also exactly the route a child takes.
+     *
+     * Going through Settings rather than through our own app also keeps the
+     * background-activity-launch conditions honest: our app is never foregrounded, so
+     * it gets no ~10s BAL grace period it would not have in reality.
      */
     private fun openDeactivateScreen() {
-        // With the admin already active, DeviceAdminAdd renders its "Deactivate"
-        // variant rather than the activation prompt. --ecn passes a ComponentName extra.
-        shell(
-            "am start -a ${DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN} " +
-                "--ecn ${DevicePolicyManager.EXTRA_DEVICE_ADMIN} $adminArg"
-        )
-        val opened = device.wait(Until.hasObject(By.pkg(SETTINGS_PKG)), UI_TIMEOUT)
+        shell("am start -n 'com.android.settings/.Settings\$DeviceAdminSettingsActivity'")
         assertTrue(
-            "Settings device-admin screen never opened " +
-                "(foreground=${device.currentPackageName})",
+            "device admin list never opened (foreground=${device.currentPackageName})",
+            device.wait(Until.hasObject(By.pkg(SETTINGS_PKG)), UI_TIMEOUT)
+        )
+
+        val entry = device.wait(Until.findObject(By.textContains(ADMIN_LABEL_HINT)), UI_TIMEOUT)
+        if (entry == null) {
+            dumpVisibleText()
+            error("our admin is not listed (foreground=${device.currentPackageName})")
+        }
+        entry.click()
+
+        // DeviceAdminAdd now opens inside Settings' task rather than as a new one.
+        val opened = device.wait(
+            Until.hasObject(By.textContains(DEACTIVATE_HINT)),
+            UI_TIMEOUT
+        )
+        if (!opened) dumpVisibleText()
+        assertTrue(
+            "deactivate screen never opened (foreground=${device.currentPackageName})",
             opened
         )
+    }
+
+    /** Cheap diagnostics so a failure names what was actually on screen. */
+    private fun dumpVisibleText() {
+        val texts = device.findObjects(By.clazz(Pattern.compile(".*")))
+            .mapNotNull { runCatching { it.text }.getOrNull() }
+            .filter { it.isNotBlank() }
+            .distinct()
+        Log.w(TAG, "visible text: $texts")
     }
 
     private fun tapDeactivate() {
@@ -184,6 +205,8 @@ class UninstallProtectionInstrumentedTest {
         const val SETTINGS_PKG = "com.android.settings"
         const val TEST_PIN = "1234"
         const val GATE_TITLE = "Ask a parent"
+        const val ADMIN_LABEL_HINT = "Acutis"
+        const val DEACTIVATE_HINT = "eactivate"
         const val UI_TIMEOUT = 10_000L
         const val SHORT_TIMEOUT = 3_000L
     }
