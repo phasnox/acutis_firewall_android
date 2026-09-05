@@ -3,7 +3,9 @@ package com.acutis.firewall.admin
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -11,6 +13,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import com.acutis.firewall.MainActivity
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -141,41 +144,37 @@ class UninstallProtectionInstrumentedTest {
     }
 
     /**
-     * Reaches the deactivate screen through the device admin list.
+     * Opens the deactivate screen from our own Activity, without FLAG_ACTIVITY_NEW_TASK.
      *
-     * DeviceAdminAdd cannot be launched by intent from shell: `am start` always adds
-     * FLAG_ACTIVITY_NEW_TASK and the activity refuses it outright, logging
-     * "Cannot start ADD_DEVICE_ADMIN as a new task" and finishing. It has to be entered
-     * from inside Settings' own task - which is also exactly the route a child takes.
+     * DeviceAdminAdd refuses to run as a new task ("Cannot start ADD_DEVICE_ADMIN as a
+     * new task"), which rules out `am start` entirely, and shell-launching Settings'
+     * internal list activity is version-fragile. Starting it from a real Activity keeps
+     * it in the same task, which the screen accepts.
      *
-     * Going through Settings rather than through our own app also keeps the
-     * background-activity-launch conditions honest: our app is never foregrounded, so
-     * it gets no ~10s BAL grace period it would not have in reality.
+     * The cost is that our app is briefly foreground, and BAL grants a recently
+     * foregrounded app a grace period during which it CAN start activities. That would
+     * let the PIN gate appear for a reason it never would in reality, so we wait the
+     * grace period out before tapping Deactivate.
      */
     private fun openDeactivateScreen() {
-        shell("am start -n 'com.android.settings/.Settings\$DeviceAdminSettingsActivity'")
-        assertTrue(
-            "device admin list never opened (foreground=${device.currentPackageName})",
-            device.wait(Until.hasObject(By.pkg(SETTINGS_PKG)), UI_TIMEOUT)
-        )
-
-        val entry = device.wait(Until.findObject(By.textContains(ADMIN_LABEL_HINT)), UI_TIMEOUT)
-        if (entry == null) {
-            dumpVisibleText()
-            error("our admin is not listed (foreground=${device.currentPackageName})")
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.startActivity(
+                    Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                        .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+                )
+            }
+            val opened = device.wait(Until.hasObject(By.textContains(DEACTIVATE_HINT)), UI_TIMEOUT)
+            if (!opened) dumpVisibleText()
+            assertTrue(
+                "deactivate screen never opened (foreground=${device.currentPackageName})",
+                opened
+            )
         }
-        entry.click()
 
-        // DeviceAdminAdd now opens inside Settings' task rather than as a new one.
-        val opened = device.wait(
-            Until.hasObject(By.textContains(DEACTIVATE_HINT)),
-            UI_TIMEOUT
-        )
-        if (!opened) dumpVisibleText()
-        assertTrue(
-            "deactivate screen never opened (foreground=${device.currentPackageName})",
-            opened
-        )
+        // Let the BAL grace period lapse so the gate is judged under the same conditions
+        // as a child who walked into Settings from the launcher.
+        Thread.sleep(BAL_GRACE_WAIT_MS)
     }
 
     /** Cheap diagnostics so a failure names what was actually on screen. */
@@ -205,9 +204,10 @@ class UninstallProtectionInstrumentedTest {
         const val SETTINGS_PKG = "com.android.settings"
         const val TEST_PIN = "1234"
         const val GATE_TITLE = "Ask a parent"
-        const val ADMIN_LABEL_HINT = "Acutis"
         const val DEACTIVATE_HINT = "eactivate"
         const val UI_TIMEOUT = 10_000L
         const val SHORT_TIMEOUT = 3_000L
+        // BAL grace for a recently foregrounded app is ~10s; overshoot it.
+        const val BAL_GRACE_WAIT_MS = 15_000L
     }
 }
