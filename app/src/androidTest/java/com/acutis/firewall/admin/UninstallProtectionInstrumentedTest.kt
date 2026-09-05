@@ -13,9 +13,9 @@ import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.acutis.firewall.data.preferences.SettingsDataStore
-import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -91,7 +91,7 @@ class UninstallProtectionInstrumentedTest {
     /** Sanity: the platform really does consider us an active admin. */
     @Test
     fun deviceAdminActivates() {
-        assertThat(isAdminActive()).isTrue()
+        assertTrue("platform does not report us as an active admin", isAdminActive())
     }
 
     /**
@@ -107,7 +107,11 @@ class UninstallProtectionInstrumentedTest {
             Until.hasObject(By.textContains("a parent will be notified")),
             UI_TIMEOUT
         )
-        assertThat(shown).isTrue()
+        assertTrue(
+            "onDisableRequested warning never reached the confirmation dialog; " +
+                "foreground=${device.currentPackageName}",
+            shown
+        )
     }
 
     /**
@@ -126,8 +130,14 @@ class UninstallProtectionInstrumentedTest {
             Until.hasObject(By.text(GATE_TITLE)),
             UI_TIMEOUT
         )
-        Log.i(TAG, "foreground package after Deactivate = ${device.currentPackageName}")
-        assertThat(appeared).isTrue()
+        val foreground = device.currentPackageName
+        Log.i(TAG, "foreground package after Deactivate = $foreground")
+        assertTrue(
+            "PIN gate did not reach the foreground after tapping Deactivate " +
+                "(foreground=$foreground). Settings calls stopAppSwitches() before " +
+                "getRemoveWarning(), which blocks background activity starts.",
+            appeared
+        )
     }
 
     private fun openDeactivateScreen() {
@@ -138,9 +148,10 @@ class UninstallProtectionInstrumentedTest {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
-        assertThat(
+        assertTrue(
+            "Settings device-admin screen never opened",
             device.wait(Until.hasObject(By.pkg(SETTINGS_PKG).depth(0)), UI_TIMEOUT)
-        ).isTrue()
+        )
     }
 
     private fun tapDeactivate() {
