@@ -3,7 +3,6 @@ package com.acutis.firewall.admin
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -66,6 +65,7 @@ class UninstallProtectionInstrumentedTest {
             settings.setPinEnabled(true)
             settings.setUninstallProtectionSelfDisable(false)
             settings.setUninstallProtectionRemoved(false)
+            settings.setInitialDownloadPromptShown(true)
         }
 
         shell("dpm set-active-admin --user 0 $adminArg")
@@ -140,17 +140,29 @@ class UninstallProtectionInstrumentedTest {
         )
     }
 
+    /**
+     * Opens the screen via `am start` from shell rather than context.startActivity.
+     *
+     * Two reasons. First, a backgrounded app cannot start an activity on API 29+, so
+     * the previous context.startActivity was itself being blocked. Second, and more
+     * important for validity: routing through our own app would leave it recently
+     * foregrounded, and background-activity-launch rules grant a ~10s grace period to
+     * an app that was just in front. That would let the PIN gate appear here for a
+     * reason it would not in reality, where the child walks into Settings from the
+     * launcher with our app long since backgrounded.
+     */
     private fun openDeactivateScreen() {
         // With the admin already active, DeviceAdminAdd renders its "Deactivate"
-        // variant rather than the activation prompt.
-        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
+        // variant rather than the activation prompt. --ecn passes a ComponentName extra.
+        shell(
+            "am start -a ${DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN} " +
+                "--ecn ${DevicePolicyManager.EXTRA_DEVICE_ADMIN} $adminArg"
+        )
+        val opened = device.wait(Until.hasObject(By.pkg(SETTINGS_PKG)), UI_TIMEOUT)
         assertTrue(
-            "Settings device-admin screen never opened",
-            device.wait(Until.hasObject(By.pkg(SETTINGS_PKG).depth(0)), UI_TIMEOUT)
+            "Settings device-admin screen never opened " +
+                "(foreground=${device.currentPackageName})",
+            opened
         )
     }
 
