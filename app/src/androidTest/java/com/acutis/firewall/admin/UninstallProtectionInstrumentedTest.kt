@@ -14,13 +14,14 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import com.acutis.firewall.MainActivity
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import kotlinx.coroutines.runBlocking
 import org.junit.After
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Ignore
@@ -317,20 +318,45 @@ class UninstallProtectionInstrumentedTest {
         )
     }
 
-    /** Fails if the button reads as enabled at any point within [SETTLE_MS]. */
-    private fun assertStaysDisabled(button: () -> BySelector, label: String) {
-        val enabled = device.wait(Until.hasObject(button().enabled(true)), SETTLE_MS)
-        assertFalse("$label is enabled while protection is on", enabled)
-        assertTrue("$label disappeared from the page", device.hasObject(button()))
+    /** Fails if the control reads as enabled at any point within [SETTLE_MS]. */
+    private fun assertStaysDisabled(label: () -> BySelector, name: String) {
+        val deadline = SystemClock.uptimeMillis() + SETTLE_MS
+        var seen = false
+        while (SystemClock.uptimeMillis() < deadline) {
+            when (controlEnabled(label)) {
+                true -> fail("$name is enabled while protection is on")
+                false -> seen = true
+                null -> Unit
+            }
+            Thread.sleep(POLL_MS)
+        }
+        assertTrue("$name disappeared from the page", seen)
     }
 
-    private fun assertBecomesEnabled(button: () -> BySelector, label: String) {
-        val enabled = device.wait(Until.hasObject(button().enabled(true)), UI_TIMEOUT)
-        if (!enabled) dumpVisibleText()
-        assertTrue(
-            "$label never enabled with protection off, so its disabled state proves nothing",
-            enabled
-        )
+    private fun assertBecomesEnabled(label: () -> BySelector, name: String) {
+        val deadline = SystemClock.uptimeMillis() + UI_TIMEOUT
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (controlEnabled(label) == true) return
+            Thread.sleep(POLL_MS)
+        }
+        dumpVisibleText()
+        fail("$name never enabled with protection off, so its disabled state proves nothing")
+    }
+
+    /** isEnabled of the control carrying [label], or null if it is not on screen. */
+    private fun controlEnabled(label: () -> BySelector): Boolean? = runCatching {
+        device.findObjects(label()).firstNotNullOfOrNull { controlFor(it) }?.isEnabled
+    }.getOrNull()
+
+    /**
+     * The clickable node a label belongs to. On View-based Settings the label is the
+     * Button itself. Android 15's App info is Compose: the label is a separate Text node
+     * inside the button, it always reports enabled, and only the button carries the state.
+     */
+    private fun controlFor(label: UiObject2): UiObject2? {
+        var node: UiObject2? = label
+        while (node != null && !node.isClickable) node = node.parent
+        return node
     }
 
     /** What the in-app switch does once the PIN is accepted: flag it as ours, then remove. */
@@ -362,8 +388,8 @@ class UninstallProtectionInstrumentedTest {
         const val UI_TIMEOUT = 10_000L
         const val SHORT_TIMEOUT = 3_000L
         const val STORAGE_ENTRY = "Storage"
-        // How long a disabled button must stay disabled. App info refreshes its buttons
-        // on resume, well inside this.
+        // How long a disabled control must stay disabled. Settings settles it within about
+        // 2 s; Android 15's Compose App info computes it off the main thread.
         const val SETTLE_MS = 5_000L
         const val POLL_MS = 100L
         // The background broadcast timeout: past this the queue gives up on the receiver.
