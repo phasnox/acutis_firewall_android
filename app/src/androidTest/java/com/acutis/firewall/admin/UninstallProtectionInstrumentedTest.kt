@@ -79,12 +79,22 @@ class UninstallProtectionInstrumentedTest {
             settings.setUninstallProtectionSelfDisable(false)
             settings.setUninstallProtectionRemoved(false)
             settings.setInitialDownloadPromptShown(true)
+            // onEnabled sets this back to true, which is how setUp knows it has run.
+            settings.setUninstallProtectionEnabled(false)
         }
 
         shell("dpm set-active-admin --user 0 $adminArg")
         // If the emulator image will not grant shell MANAGE_DEVICE_ADMINS there is
         // nothing to test; skip loudly rather than report a false failure.
         assumeTrue("Could not activate device admin on this image", isAdminActive())
+        // onEnabled resets the tamper flag and record. It arrives asynchronously and can
+        // land seconds later on API 33+, undoing whatever a test has set up since.
+        val start = SystemClock.uptimeMillis()
+        assertTrue(
+            "onEnabled never ran",
+            awaitAdminBroadcast { runBlocking { settings.uninstallProtectionEnabled.first() } }
+        )
+        Log.i(TAG, "onEnabled landed ${SystemClock.uptimeMillis() - start} ms after activation")
     }
 
     @After
@@ -411,17 +421,19 @@ class UninstallProtectionInstrumentedTest {
     }
 
     /**
-     * DPMS drops the admin only after ACTION_DEVICE_ADMIN_DISABLED has been delivered,
-     * an ordered broadcast that queues behind everything else on the background queue.
-     * On a freshly booted API 33 emulator that took 13 s.
+     * Admin changes reach our receiver as ordered broadcasts that queue behind everything
+     * else on the background queue; on a freshly booted API 33 emulator one took 13 s.
+     * DPMS also drops an admin only once ACTION_DEVICE_ADMIN_DISABLED has been delivered.
      */
-    private fun awaitAdminRemoved(): Boolean {
-        val deadline = SystemClock.uptimeMillis() + ADMIN_REMOVAL_TIMEOUT
-        while (isAdminActive() && SystemClock.uptimeMillis() < deadline) {
+    private fun awaitAdminBroadcast(done: () -> Boolean): Boolean {
+        val deadline = SystemClock.uptimeMillis() + ADMIN_BROADCAST_TIMEOUT
+        while (!done() && SystemClock.uptimeMillis() < deadline) {
             Thread.sleep(POLL_MS)
         }
-        return !isAdminActive()
+        return done()
     }
+
+    private fun awaitAdminRemoved(): Boolean = awaitAdminBroadcast { !isAdminActive() }
 
     private companion object {
         const val TAG = "UninstallProtectionTest"
@@ -437,7 +449,7 @@ class UninstallProtectionInstrumentedTest {
         const val SETTLE_MS = 5_000L
         const val POLL_MS = 100L
         // The background broadcast timeout: past this the queue gives up on the receiver.
-        const val ADMIN_REMOVAL_TIMEOUT = 60_000L
+        const val ADMIN_BROADCAST_TIMEOUT = 60_000L
         // BAL grace for a recently foregrounded app is ~10s; overshoot it.
         const val BAL_GRACE_WAIT_MS = 15_000L
     }
