@@ -29,6 +29,8 @@ first, since the PIN is what unlocks it again.
 | `adb shell pm clear` | **Not blocked.** Wipes the PIN; detected on next launch |
 | Notification → "Disable Firewall" | Asks for the PIN |
 | Deactivate the device admin | Warning shown; PIN prompt is best-effort and often does not appear. Tamper alert either way |
+| Deactivate, then Clear storage | Tamper alert still shown on next launch |
+| Deactivate, then uninstall and reinstall | **Not detected** — a reinstall starts from nothing |
 | Safe Mode → deactivate admin | **Not blocked** — the app does not run in Safe Mode |
 
 Three things are worth being clear about:
@@ -53,6 +55,12 @@ Three things are worth being clear about:
   registration survives that, so the app treats "admin active but no PIN" as proof
   the data was wiped, alerts you, and — deliberately — lets protection be switched
   off without a PIN in that state, so you are never locked out of your own device.
+
+  Once protection has been removed, Settings will clear storage too, but that no
+  longer erases the tamper alert: the removal is also recorded in Android's own
+  settings for the app (the enabled state of a hidden component), which clearing
+  storage leaves alone. Only uninstalling the app, or turning protection back on,
+  removes it.
 
 If you want something genuinely unremovable, use Device Owner mode below.
 
