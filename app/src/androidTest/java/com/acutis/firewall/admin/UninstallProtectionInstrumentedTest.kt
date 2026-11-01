@@ -4,6 +4,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.util.Log
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -11,12 +12,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.acutis.firewall.MainActivity
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -26,9 +29,8 @@ import org.junit.runner.RunWith
 import java.util.regex.Pattern
 
 /**
- * Drives the real system Settings deactivate flow to answer the one question unit
- * tests cannot: when someone taps "Deactivate" on the device admin screen, does our
- * PIN gate actually reach the foreground?
+ * Drives the real system Settings screens that uninstall protection depends on: the
+ * App info buttons it disables, and the device admin deactivate flow.
  *
  * Deliberately does NOT use a Hilt test runner. These tests need the real
  * AcutisFirewallApp running with its real Hilt graph, because the thing under test is
@@ -96,6 +98,33 @@ class UninstallProtectionInstrumentedTest {
     @Test
     fun deviceAdminActivates() {
         assertTrue("platform does not report us as an active admin", isAdminActive())
+    }
+
+    /**
+     * With protection on, Settings greys out Force stop: AppButtonsPreferenceController
+     * disables it for any package that has an active device admin. The second half is
+     * the control - the same button enables once protection is off - so the disabled
+     * state is down to the admin, not to the page refreshing late.
+     */
+    @Test
+    fun forceStopIsDisabledWhileProtected() {
+        openAppInfo()
+        assertStaysDisabled(::forceStopButton, "Force stop")
+
+        turnProtectionOff()
+        openAppInfo()
+        assertBecomesEnabled(::forceStopButton, "Force stop")
+    }
+
+    /** Same for Clear storage, which AppStorageSettings disables on the same check. */
+    @Test
+    fun clearStorageIsDisabledWhileProtected() {
+        openAppStorage()
+        assertStaysDisabled(::clearStorageButton, "Clear storage")
+
+        turnProtectionOff()
+        openAppStorage()
+        assertBecomesEnabled(::clearStorageButton, "Clear storage")
     }
 
     /**
@@ -250,6 +279,70 @@ class UninstallProtectionInstrumentedTest {
         target.click()
     }
 
+    // BySelector is mutable, so every query gets a fresh one.
+    private fun forceStopButton(): BySelector = By.text(Pattern.compile("(?i)force stop"))
+
+    private fun clearStorageButton(): BySelector = By.text(Pattern.compile("(?i)clear storage"))
+
+    /** A fresh App info page every time, so it reads the current admin state. */
+    private fun openAppInfo() {
+        shell(
+            "am start -W --activity-clear-task " +
+                "-a android.settings.APPLICATION_DETAILS_SETTINGS -d package:${context.packageName}"
+        )
+        val opened = device.wait(Until.hasObject(forceStopButton()), UI_TIMEOUT)
+        if (!opened) dumpVisibleText()
+        assertTrue("App info never showed Force stop (foreground=${device.currentPackageName})", opened)
+    }
+
+    private fun openAppStorage() {
+        openAppInfo()
+        val entry = device.wait(Until.findObject(By.textStartsWith(STORAGE_ENTRY)), SHORT_TIMEOUT)
+            ?: device.findObject(By.scrollable(true))?.let { list ->
+                list.scroll(Direction.DOWN, 0.8f)
+                device.wait(Until.findObject(By.textStartsWith(STORAGE_ENTRY)), SHORT_TIMEOUT)
+            }
+            ?: run {
+                dumpVisibleText()
+                error("App info has no '$STORAGE_ENTRY' entry. Foreground=${device.currentPackageName}")
+            }
+        entry.click()
+        val opened = device.wait(Until.hasObject(clearStorageButton()), UI_TIMEOUT)
+        if (!opened) dumpVisibleText()
+        assertTrue(
+            "Storage page never showed Clear storage (foreground=${device.currentPackageName})",
+            opened
+        )
+    }
+
+    /** Fails if the button reads as enabled at any point within [SETTLE_MS]. */
+    private fun assertStaysDisabled(button: () -> BySelector, label: String) {
+        val enabled = device.wait(Until.hasObject(button().enabled(true)), SETTLE_MS)
+        assertFalse("$label is enabled while protection is on", enabled)
+        assertTrue("$label disappeared from the page", device.hasObject(button()))
+    }
+
+    private fun assertBecomesEnabled(button: () -> BySelector, label: String) {
+        val enabled = device.wait(Until.hasObject(button().enabled(true)), UI_TIMEOUT)
+        if (!enabled) dumpVisibleText()
+        assertTrue(
+            "$label never enabled with protection off, so its disabled state proves nothing",
+            enabled
+        )
+    }
+
+    /** What the in-app switch does once the PIN is accepted: flag it as ours, then remove. */
+    private fun turnProtectionOff() {
+        runBlocking { settings.setUninstallProtectionSelfDisable(true) }
+        context.getSystemService(DevicePolicyManager::class.java).removeActiveAdmin(admin)
+        // The admin only goes away once our onDisabled broadcast has been delivered.
+        val deadline = SystemClock.uptimeMillis() + UI_TIMEOUT
+        while (isAdminActive() && SystemClock.uptimeMillis() < deadline) {
+            Thread.sleep(POLL_MS)
+        }
+        assertFalse("device admin still active after removeActiveAdmin", isAdminActive())
+    }
+
     private companion object {
         const val TAG = "UninstallProtectionTest"
         const val SETTINGS_PKG = "com.android.settings"
@@ -258,6 +351,11 @@ class UninstallProtectionInstrumentedTest {
         const val DEACTIVATE_HINT = "eactivate"
         const val UI_TIMEOUT = 10_000L
         const val SHORT_TIMEOUT = 3_000L
+        const val STORAGE_ENTRY = "Storage"
+        // How long a disabled button must stay disabled. App info refreshes its buttons
+        // on resume, well inside this.
+        const val SETTLE_MS = 5_000L
+        const val POLL_MS = 100L
         // BAL grace for a recently foregrounded app is ~10s; overshoot it.
         const val BAL_GRACE_WAIT_MS = 15_000L
     }
