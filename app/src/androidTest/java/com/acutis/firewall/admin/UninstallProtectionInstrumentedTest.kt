@@ -18,6 +18,7 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import com.acutis.firewall.MainActivity
+import com.acutis.firewall.R
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -154,21 +155,23 @@ class UninstallProtectionInstrumentedTest {
     }
 
     /**
-     * What Clear storage leaves behind: the record without the stored flag. The alert has
-     * to be raised from the record alone.
+     * What Clear storage leaves behind: the record without the stored flag. Opening the
+     * app must still show the parent the alert.
      */
     @Test
-    fun tamperRecordAloneRaisesTheAlert() {
+    fun tamperRecordAloneShowsTheAlert() {
         // setUp cleared both copies; restore only the one Clear storage cannot reach.
         context.packageManager.setComponentEnabledSetting(
             tamperRecord,
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
             PackageManager.DONT_KILL_APP
         )
-        assertTrue(
-            "tamper alert not raised from the record alone",
-            runBlocking { settings.uninstallProtectionRemoved.first() }
-        )
+        ActivityScenario.launch(MainActivity::class.java).use {
+            val title = context.getString(R.string.uninstall_protection_removed_title)
+            val shown = device.wait(Until.hasObject(By.text(title)), UI_TIMEOUT)
+            if (!shown) dumpVisibleText()
+            assertTrue("'$title' not shown from the record alone", shown)
+        }
     }
 
     /**
