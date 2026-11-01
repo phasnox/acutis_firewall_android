@@ -1,6 +1,10 @@
 package com.acutis.firewall.data.preferences
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -21,6 +25,13 @@ class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val dataStore = context.dataStore
+
+    /**
+     * The copy of [uninstallProtectionRemoved] that Clear storage cannot reach: the
+     * enabled state of a never-launched manifest component. Android keeps that in its
+     * own package records, which clearing app data leaves alone and uninstalling removes.
+     */
+    private val tamperRecord = ComponentName(context, TAMPER_RECORD_CLASS)
 
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -49,6 +60,8 @@ class SettingsDataStore @Inject constructor(
         private val UNINSTALL_PROTECTION_REMOVED = booleanPreferencesKey("uninstall_protection_removed")
         private val UNINSTALL_PROTECTION_SELF_DISABLE = booleanPreferencesKey("uninstall_protection_self_disable")
         private const val PIN_HASH_KEY = "pin_hash"
+        private const val TAMPER_RECORD_CLASS = "com.acutis.firewall.admin.TamperRecord"
+        private const val TAG = "SettingsDataStore"
     }
 
     val firewallEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
@@ -87,9 +100,14 @@ class SettingsDataStore @Inject constructor(
         prefs[UNINSTALL_PROTECTION_ENABLED] ?: false
     }
 
-    /** Set when the device admin was removed WITHOUT the PIN - i.e. tampering. */
+    /**
+     * Set when the device admin was removed WITHOUT the PIN - i.e. tampering.
+     *
+     * Read from two places. Once the admin is gone nothing greys out Clear storage, which
+     * would wipe the DataStore copy and with it the alert, so [tamperRecord] counts too.
+     */
     val uninstallProtectionRemoved: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[UNINSTALL_PROTECTION_REMOVED] ?: false
+        (prefs[UNINSTALL_PROTECTION_REMOVED] ?: false) || isTamperRecorded()
     }
 
     suspend fun isFirewallEnabled(): Boolean = firewallEnabled.first()
@@ -159,9 +177,33 @@ class SettingsDataStore @Inject constructor(
     }
 
     suspend fun setUninstallProtectionRemoved(removed: Boolean) {
+        // First, so the emission this edit triggers already reads the matching record.
+        recordTamper(removed)
         dataStore.edit { prefs ->
             prefs[UNINSTALL_PROTECTION_REMOVED] = removed
         }
+    }
+
+    private fun isTamperRecorded(): Boolean = runCatching {
+        context.packageManager.getComponentEnabledSetting(tamperRecord) ==
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    }.getOrDefault(false)
+
+    private fun recordTamper(removed: Boolean) {
+        val state = if (removed) {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } else {
+            PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+        }
+        // DONT_KILL_APP: this runs inside our own receiver. SYNCHRONOUS (13+): written to
+        // disk before returning, so a reboot straight afterwards cannot lose it.
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            PackageManager.DONT_KILL_APP or PackageManager.SYNCHRONOUS
+        } else {
+            PackageManager.DONT_KILL_APP
+        }
+        runCatching { context.packageManager.setComponentEnabledSetting(tamperRecord, state, flags) }
+            .onFailure { Log.w(TAG, "Could not record tamper state outside app data", it) }
     }
 
     /**

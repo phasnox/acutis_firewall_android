@@ -28,6 +28,19 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Never launched. Its enabled state is the copy of the tamper flag that survives
+            Settings > Apps > Clear storage, because Android keeps component state in its own
+            package records rather than in app data. Setting
+            android:resetEnabledSettingsOnAppDataCleared would defeat it.
+            See SettingsDataStore.uninstallProtectionRemoved.
+        -->
+        <activity-alias
+            android:name=".admin.TamperRecord"
+            android:enabled="false"
+            android:exported="false"
+            android:targetActivity=".MainActivity" />
+
         <service
             android:name=".service.FirewallVpnService"
             android:exported="false"

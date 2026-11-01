@@ -4,6 +4,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.test.core.app.ActivityScenario
@@ -18,8 +19,10 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import com.acutis.firewall.MainActivity
 import com.acutis.firewall.data.preferences.SettingsDataStore
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
@@ -52,6 +55,8 @@ class UninstallProtectionInstrumentedTest {
         "com.acutis.firewall.admin.UninstallProtectionAdminReceiver"
     )
     private val adminArg = admin.flattenToString()
+    private val tamperRecord =
+        ComponentName("com.acutis.firewall", "com.acutis.firewall.admin.TamperRecord")
 
     private lateinit var settings: SettingsDataStore
 
@@ -128,6 +133,42 @@ class UninstallProtectionInstrumentedTest {
         turnProtectionOff()
         openAppStorage()
         assertBecomesEnabled(::clearStorageButton, "Clear storage")
+    }
+
+    /**
+     * Removing the admin outside the app - what a child does in Settings - has to be
+     * recorded beyond app data too, or deactivating and then clearing storage erases the
+     * alert. This runs the real onDisabled path: no self-disable flag is set.
+     */
+    @Test
+    fun removalOutsideTheAppIsRecordedBeyondAppData() {
+        context.getSystemService(DevicePolicyManager::class.java).removeActiveAdmin(admin)
+        assertTrue("device admin still active after removeActiveAdmin", awaitAdminRemoved())
+
+        assertTrue("tamper flag not raised", runBlocking { settings.uninstallProtectionRemoved.first() })
+        assertEquals(
+            "tamper record not set outside app data",
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            context.packageManager.getComponentEnabledSetting(tamperRecord)
+        )
+    }
+
+    /**
+     * What Clear storage leaves behind: the record without the stored flag. The alert has
+     * to be raised from the record alone.
+     */
+    @Test
+    fun tamperRecordAloneRaisesTheAlert() {
+        // setUp cleared both copies; restore only the one Clear storage cannot reach.
+        context.packageManager.setComponentEnabledSetting(
+            tamperRecord,
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP
+        )
+        assertTrue(
+            "tamper alert not raised from the record alone",
+            runBlocking { settings.uninstallProtectionRemoved.first() }
+        )
     }
 
     /**
