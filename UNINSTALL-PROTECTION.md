@@ -1,6 +1,7 @@
 # Uninstall protection
 
-Stops a child removing Acutis Firewall without the parent PIN.
+Stops a child uninstalling Acutis Firewall, or force-stopping it or clearing its
+storage from Settings.
 
 ## What it actually does
 
@@ -9,7 +10,7 @@ show a PIN prompt when someone taps Uninstall. What Acutis Firewall does instead
 register as a **device administrator**. While an admin is active the platform itself
 refuses to uninstall the package, which reroutes anyone trying to remove it through
 Settings → Security → Device admin apps → Deactivate — a screen the app *can* react
-to, and where it asks for the PIN.
+to, though it cannot stop the removal.
 
 Turn it on in **Settings → Security → Uninstall protection**. You need a PIN set
 first, since the PIN is what unlocks it again.
@@ -20,14 +21,17 @@ first, since the PIN is what unlocks it again.
 |---|---|
 | Long-press icon → Uninstall | Blocked by the OS |
 | Settings → Apps → Uninstall | Greyed out |
+| Settings → Apps → Force stop | Greyed out |
+| Settings → Apps → Clear storage | Greyed out |
 | Play Store → Uninstall | Blocked |
 | `adb uninstall` | Fails with `DELETE_FAILED_DEVICE_POLICY_MANAGER` |
+| `adb shell am force-stop` | **Not blocked** — needs developer options and a computer |
+| `adb shell pm clear` | **Not blocked.** Wipes the PIN; detected on next launch |
 | Notification → "Disable Firewall" | Asks for the PIN |
 | Deactivate the device admin | Warning shown; PIN prompt is best-effort and often does not appear. Tamper alert either way |
-| Settings → Apps → Clear storage | **Not blocked.** Detected on next launch |
 | Safe Mode → deactivate admin | **Not blocked** — the app does not run in Safe Mode |
 
-Two things are worth being clear about:
+Three things are worth being clear about:
 
 - **The PIN prompt on the deactivate screen is best-effort, and on stock Android it
   probably never appears.** Two platform defences stop it, both deliberate: Settings
@@ -38,9 +42,14 @@ Two things are worth being clear about:
   start an activity while it has a visible window, which it does not have here.
 
   So do not rely on the prompt. What you *can* rely on is that **uninstall is blocked**
-  and that **you are told when protection is removed** - both verified on Android 10,
-  13 and 15.
-- **Clearing app storage wipes the PIN** along with every other setting. The admin
+  (verified on Android 10, 13 and 15) and that **you are told when protection is
+  removed**.
+- **Force stop and Clear storage are greyed out by Android itself**, which disables
+  both for any app with an active device admin - verified on Android 10, 13 and 15.
+  That is stock Android: Samsung and Xiaomi rewrite these screens and have not been
+  checked. Over `adb` both still work; Device Owner mode closes that too.
+- **Clearing app storage wipes the PIN** along with every other setting. Settings will
+  not do it while protection is on, but `adb shell pm clear` will. The admin
   registration survives that, so the app treats "admin active but no PIN" as proof
   the data was wiped, alerts you, and — deliberately — lets protection be switched
   off without a PIN in that state, so you are never locked out of your own device.
@@ -64,7 +73,8 @@ a non-device-owner admin can always be deactivated by the user.
 ## Device Owner mode (advanced, genuinely unremovable)
 
 This is the only configuration that cannot be undone from Settings. It blocks
-uninstall outright, plus Safe Mode and factory reset.
+uninstall outright, plus Safe Mode and factory reset, and Android refuses to force
+stop the app or clear its storage, even over `adb`.
 
 **Read this first: undoing it may require a factory reset.** `dpm` cannot remove a
 device owner. The only ways out are the in-app "Uninstall protection → off" path
