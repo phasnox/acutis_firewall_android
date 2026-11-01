@@ -47,6 +47,10 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Several JUnit 5 jars reach the androidTest classpath transitively and
+            // each ships these, which fails mergeDebugAndroidTestJavaResource. They
+            // are not in the release APK, so excluding them is a no-op there.
+            excludes += "/META-INF/{LICENSE.md,LICENSE-notice.md,NOTICE.md}"
         }
     }
 
@@ -110,6 +114,7 @@ dependencies {
     testImplementation("com.google.truth:truth:1.1.5")
 
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.01.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

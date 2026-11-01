@@ -48,7 +48,7 @@ A parental control Android app that blocks adult and dangerous content using a l
 
 ### Uninstall Protection
 - Optional device-administrator registration blocks uninstall at the OS level
-- Deactivating it prompts for the parent PIN, and alerts if removed anyway
+- Removing protection in-app requires the parent PIN; you are alerted if the device admin is deactivated from system Settings
 - Detects the one route it cannot block: clearing app storage wipes the PIN
 - Optional Device Owner setup for genuinely unremovable protection
 - See [UNINSTALL-PROTECTION.md](UNINSTALL-PROTECTION.md)

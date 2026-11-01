@@ -23,15 +23,23 @@ first, since the PIN is what unlocks it again.
 | Play Store → Uninstall | Blocked |
 | `adb uninstall` | Fails with `DELETE_FAILED_DEVICE_POLICY_MANAGER` |
 | Notification → "Disable Firewall" | Asks for the PIN |
-| Deactivate the device admin | PIN prompt, then a tamper alert either way |
+| Deactivate the device admin | Warning shown; PIN prompt is best-effort and often does not appear. Tamper alert either way |
 | Settings → Apps → Clear storage | **Not blocked.** Detected on next launch |
 | Safe Mode → deactivate admin | **Not blocked** — the app does not run in Safe Mode |
 
 Two things are worth being clear about:
 
-- **The PIN prompt cannot veto the removal.** Android gives an admin no power to
-  refuse its own deactivation; the prompt is a barrier in front of a child, and the
-  tamper alert tells you if it was removed anyway. It is not a lock.
+- **The PIN prompt on the deactivate screen is best-effort, and on stock Android it
+  probably never appears.** Two platform defences stop it, both deliberate: Settings
+  holds an `OP_SYSTEM_ALERT_WINDOW` restriction while that screen is up ("don't let
+  anyone overlay stuff on top of the screen"), and calls `stopAppSwitches()` before
+  asking us for a warning ("Don't allow the admin to put a dialog up in front of us
+  while we interact with the user"). Device logs confirm our app is only allowed to
+  start an activity while it has a visible window, which it does not have here.
+
+  So do not rely on the prompt. What you *can* rely on is that **uninstall is blocked**
+  and that **you are told when protection is removed** - both verified on Android 10,
+  13 and 15.
 - **Clearing app storage wipes the PIN** along with every other setting. The admin
   registration survives that, so the app treats "admin active but no PIN" as proof
   the data was wiped, alerts you, and — deliberately — lets protection be switched
