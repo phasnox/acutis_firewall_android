@@ -90,6 +90,8 @@ class UninstallProtectionInstrumentedTest {
         runCatching {
             context.getSystemService(DevicePolicyManager::class.java).removeActiveAdmin(admin)
         }
+        // Otherwise the next setUp can re-activate an admin that is still mid-removal.
+        awaitAdminRemoved()
         runBlocking { settings.setPinEnabled(false) }
         settings.clearPin()
     }
@@ -335,12 +337,20 @@ class UninstallProtectionInstrumentedTest {
     private fun turnProtectionOff() {
         runBlocking { settings.setUninstallProtectionSelfDisable(true) }
         context.getSystemService(DevicePolicyManager::class.java).removeActiveAdmin(admin)
-        // The admin only goes away once our onDisabled broadcast has been delivered.
-        val deadline = SystemClock.uptimeMillis() + UI_TIMEOUT
+        assertTrue("device admin still active after removeActiveAdmin", awaitAdminRemoved())
+    }
+
+    /**
+     * DPMS drops the admin only after ACTION_DEVICE_ADMIN_DISABLED has been delivered,
+     * an ordered broadcast that queues behind everything else on the background queue.
+     * On a freshly booted API 33 emulator that took 13 s.
+     */
+    private fun awaitAdminRemoved(): Boolean {
+        val deadline = SystemClock.uptimeMillis() + ADMIN_REMOVAL_TIMEOUT
         while (isAdminActive() && SystemClock.uptimeMillis() < deadline) {
             Thread.sleep(POLL_MS)
         }
-        assertFalse("device admin still active after removeActiveAdmin", isAdminActive())
+        return !isAdminActive()
     }
 
     private companion object {
@@ -356,6 +366,8 @@ class UninstallProtectionInstrumentedTest {
         // on resume, well inside this.
         const val SETTLE_MS = 5_000L
         const val POLL_MS = 100L
+        // The background broadcast timeout: past this the queue gives up on the receiver.
+        const val ADMIN_REMOVAL_TIMEOUT = 60_000L
         // BAL grace for a recently foregrounded app is ~10s; overshoot it.
         const val BAL_GRACE_WAIT_MS = 15_000L
     }
