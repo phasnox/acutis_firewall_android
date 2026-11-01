@@ -1,4 +1,4 @@
-• New: uninstall protection - stops the app being uninstalled without the parent PIN
+• New: optional uninstall protection - blocks uninstalling the app at the OS level
 • Removing protection now asks for the PIN, and alerts you if it is removed anyway
 • Detects when app storage has been cleared, which wipes the PIN
 • Fix: the notification's "Disable Firewall" action no longer bypasses the PIN
