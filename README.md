@@ -45,13 +45,14 @@ A parental control Android app that blocks adult and dangerous content using a l
 - PIN required to disable blocking or modify settings
 - Enabling protections does not require PIN (only disabling)
 - PIN also gates the notification's "Disable Firewall" action and time-rule changes
+- Forgot it? See [Forgot your PIN?](https://acutis.castillo.sh/forgot-pin)
 
 ### Uninstall Protection
 - Optional device-administrator registration blocks uninstall at the OS level
 - Removing protection in-app requires the parent PIN; you are alerted if the device admin is deactivated from system Settings, even if app storage is cleared afterwards
 - Force stop and Clear storage are greyed out while it is on; clearing storage over adb is detected
 - Optional Device Owner setup for genuinely unremovable protection
-- See [UNINSTALL-PROTECTION.md](UNINSTALL-PROTECTION.md)
+- See the [uninstall protection guide](https://acutis.castillo.sh/uninstall-protection); all guides are at [acutis.castillo.sh/help](https://acutis.castillo.sh/help)
 
 ## Screenshots
 

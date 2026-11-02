@@ -13,7 +13,8 @@ Settings → Security → Device admin apps → Deactivate — a screen the app 
 to, though it cannot stop the removal.
 
 Turn it on in **Settings → Security → Uninstall protection**. You need a PIN set
-first, since the PIN is what unlocks it again.
+first, since the PIN is what unlocks it again. Forgotten it? See
+[Forgot your PIN?](forgot-pin.md).
 
 ## What it stops, and what it does not
 
@@ -69,9 +70,10 @@ If you want something genuinely unremovable, use Device Owner mode below.
 Settings → Security → Uninstall protection → off → enter the PIN. The admin is
 removed and the app can be uninstalled normally.
 
-If the app is unavailable, Settings → Security → Device admin apps → Acutis Firewall
-→ Deactivate always works for a plain device admin. This is guaranteed by Android:
-a non-device-owner admin can always be deactivated by the user.
+Without the PIN, Android's own **Settings → Security → Device admin apps → Acutis
+Firewall → Deactivate** always works for a plain device admin: Android guarantees that
+a user can deactivate one. The app counts that as a removal without the PIN and shows
+the tamper alert, so [Forgot your PIN?](forgot-pin.md) walks through what to do after.
 
 > `adb shell dpm remove-active-admin` is **not** a reliable escape hatch. It calls
 > `forceRemoveActiveAdmin`, which throws `SecurityException: Attempt to remove
@@ -85,9 +87,11 @@ uninstall outright, plus Safe Mode and factory reset, and Android refuses to for
 stop the app or clear its storage, even over `adb`.
 
 **Read this first: undoing it may require a factory reset.** `dpm` cannot remove a
-device owner. The only ways out are the in-app "Uninstall protection → off" path
-(which calls `clearDeviceOwnerApp`) or wiping the device. Set this up only on a
-phone you are willing to reset.
+device owner. The only ways out are the in-app "Uninstall protection → off" path, which
+calls `clearDeviceOwnerApp` and needs the PIN, or wiping the device. **Forget the PIN
+and a factory reset from recovery mode is the only way out**, because the app also
+blocks the reset in Settings. Set this up only on a phone you are willing to reset, and
+keep the PIN somewhere safe.
 
 It requires a freshly factory-reset device with **no accounts added**:
 

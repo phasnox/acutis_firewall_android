@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -19,6 +20,8 @@ fun PinDialog(
     isError: Boolean = false
 ) {
     var pin by remember { mutableStateOf("") }
+    val uriHandler = LocalUriHandler.current
+    val forgotPinUrl = stringResource(R.string.forgot_pin_url)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -47,6 +50,11 @@ fun PinDialog(
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+                // Opens the website's recovery steps. runCatching: a phone without a
+                // browser must not take the PIN prompt down with it.
+                TextButton(onClick = { runCatching { uriHandler.openUri(forgotPinUrl) } }) {
+                    Text(stringResource(R.string.forgot_pin))
                 }
             }
         },

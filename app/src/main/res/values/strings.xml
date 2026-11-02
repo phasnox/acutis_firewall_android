@@ -21,6 +21,8 @@
     <string name="confirm_pin">Confirm PIN</string>
     <string name="pin_mismatch">PINs do not match</string>
     <string name="incorrect_pin">Incorrect PIN</string>
+    <string name="forgot_pin">Forgot PIN?</string>
+    <string name="forgot_pin_url" translatable="false">https://acutis.castillo.sh/forgot-pin</string>
     <string name="pin_set_success">PIN set successfully</string>
     <string name="enable_pin">Enable PIN Protection</string>
     <string name="change_pin">Change PIN</string>
