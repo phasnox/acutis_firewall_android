@@ -20,7 +20,7 @@
 </head>
 <body>
     <h1>Privacy Policy</h1>
-    <p class="last-updated">Last updated: February 2026</p>
+    <p class="last-updated">Last updated: November 2026</p>
 
     <h2>Introduction</h2>
     <p>Acutis Firewall ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how we handle information when you use our Android application.</p>
@@ -52,6 +52,7 @@
         <li><strong>Time Rules:</strong> Your configured schedules and daily limits</li>
         <li><strong>PIN:</strong> If enabled, your 4-digit PIN is stored using Android's EncryptedSharedPreferences</li>
         <li><strong>Settings:</strong> Your app preferences (auto-start, enabled categories)</li>
+        <li><strong>Tamper record:</strong> If uninstall protection is removed without the parent PIN, Android's own settings for the app record that fact, so that clearing the app's data cannot hide it</li>
     </ul>
     <p>This data never leaves your device and is deleted when you uninstall the app.</p>
 
@@ -87,6 +88,6 @@
     <p>Email: <a href="mailto:acutis@castillo.sh">acutis@castillo.sh</a></p>
 
     <h2>Your Rights</h2>
-    <p>Since we do not collect any personal data, there is no personal data to access, modify, or delete. All app data is stored locally on your device and can be removed by uninstalling the app or clearing the app's data in Android Settings.</p>
+    <p>Since we do not collect any personal data, there is no personal data to access, modify, or delete. All app data is stored locally on your device and can be removed by uninstalling the app or clearing the app's data in Android Settings. The one exception to clearing data is the tamper record above: it is removed when uninstall protection is turned back on, or when the app is uninstalled.</p>
 </body>
 </html>
