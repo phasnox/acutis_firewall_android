@@ -43,10 +43,10 @@
 
     <!-- Uninstall protection -->
     <string name="device_admin_label">Acutis Firewall uninstall protection</string>
-    <string name="device_admin_description">Prevents this app from being uninstalled without the parent PIN. Acutis Firewall does not use any other device administration capability.</string>
+    <string name="device_admin_description">Blocks uninstalling Acutis Firewall while it is active. Deactivating it in Settings raises an alert in Acutis Firewall. Acutis Firewall does not use any other device administration capability.</string>
     <string name="uninstall_protection">Uninstall protection</string>
-    <string name="uninstall_protection_summary">Stop this app being uninstalled without the PIN</string>
-    <string name="uninstall_protection_explanation">Acutis Firewall needs device administrator access so it cannot be uninstalled without your PIN. It will not lock your screen, change your password, or erase any data.</string>
+    <string name="uninstall_protection_summary">Block uninstalling this app</string>
+    <string name="uninstall_protection_explanation">Acutis Firewall needs device administrator access so that Android blocks uninstalling it. To remove it, turn it off in Acutis Firewall with your PIN. It will not lock your screen, change your password, or erase any data.</string>
     <string name="uninstall_protection_needs_pin_title">Set a PIN first</string>
     <string name="uninstall_protection_needs_pin_message">Uninstall protection is unlocked with your parent PIN. Set a PIN before turning it on.</string>
     <string name="uninstall_protection_disable_warning">Removing this lets Acutis Firewall be uninstalled, and a parent will be notified. To remove it properly, open Acutis Firewall and enter the parent PIN in Settings.</string>
