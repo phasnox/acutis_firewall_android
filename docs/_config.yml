@@ -1,0 +1,16 @@
+# GitHub Pages builds this folder with Jekyll. index.html and privacy-policy.html have no
+# front matter, so they are copied unchanged; the Markdown guides get the doc layout and
+# take their page title from their first heading.
+title: Acutis Firewall
+description: Free, open-source parental control for Android.
+# Stated rather than looked up from the GitHub API, and pinned to https.
+url: https://acutis.castillo.sh
+baseurl: ""
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: doc
+# Publish only the rendered guides, not their Markdown sources next to them.
+optional_front_matter:
+  remove_originals: true

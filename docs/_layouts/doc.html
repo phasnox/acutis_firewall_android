@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} - {{ site.title }}</title>
+    <meta name="description" content="{{ page.description | default: site.description }}">
+    <link rel="icon" type="image/png" href="{{ '/images/icon.png' | relative_url }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+    <style>
+        /* Shared look with index.html: same palette, header and footer. */
+        :root {
+            --bg: #ffffff;
+            --bg-soft: #f8fafc;
+            --bg-darker: #020617;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --brand: #4f46e5;
+            --brand-dark: #4338ca;
+            --border: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            /* Short pages still push the footer to the bottom of the window. */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        nav { display: flex; justify-content: space-between; align-items: center; height: 72px; }
+
+        .logo { display: flex; align-items: center; color: var(--text); text-decoration: none; }
+        .logo img { height: 48px; width: 48px; border-radius: 8px; }
+        .logo span {
+            font-family: 'Archivo Black', Impact, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            font-size: 1.5rem;
+            color: #243447;
+        }
+
+        .nav-links { display: flex; align-items: center; gap: 8px; }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); background: var(--bg-soft); }
+        .nav-links a.nav-cta { background: var(--text); color: white; padding: 10px 18px; }
+        .nav-links a.nav-cta:hover { background: var(--brand); color: white; }
+
+        /* The guide itself */
+        .doc { flex: 1 0 auto; width: 100%; max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+        .doc h1 { font-size: 2.2rem; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 20px; }
+        .doc h2 {
+            font-size: 1.45rem;
+            line-height: 1.3;
+            margin: 48px 0 14px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+        .doc h3 { font-size: 1.15rem; margin: 32px 0 10px; }
+        .doc p, .doc ul, .doc ol, .doc table, .doc pre, .doc blockquote { margin-bottom: 16px; }
+        .doc ul, .doc ol { padding-left: 24px; }
+        .doc li { margin-bottom: 6px; }
+        .doc li > ul, .doc li > ol { margin: 6px 0 0; }
+        .doc a { color: var(--brand); }
+        .doc a:hover { color: var(--brand-dark); }
+        .doc strong { color: var(--text); }
+        .doc code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.88em;
+            background: var(--bg-soft);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1px 6px;
+        }
+        .doc pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 20px;
+            overflow-x: auto;
+        }
+        .doc pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 0.9em; }
+        .doc blockquote {
+            border-left: 4px solid var(--brand);
+            background: var(--bg-soft);
+            border-radius: 0 8px 8px 0;
+            padding: 12px 18px;
+            color: var(--text-muted);
+        }
+        .doc blockquote p:last-child { margin-bottom: 0; }
+        /* Wide tables scroll sideways on phones instead of squeezing. */
+        .doc table { display: block; overflow-x: auto; border-collapse: collapse; font-size: 0.95rem; }
+        .doc th, .doc td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; vertical-align: top; }
+        .doc th { background: var(--bg-soft); font-weight: 600; }
+        /* Long code tokens such as DELETE_FAILED_DEVICE_POLICY_MANAGER break rather than
+           forcing the table wider than a phone. */
+        .doc td code { overflow-wrap: anywhere; }
+        .doc hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0 24px; }
+
+        footer { background: var(--bg-darker); color: rgba(255, 255, 255, 0.6); padding: 32px 0; font-size: 0.9rem; }
+        .footer-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .footer-row nav { height: auto; gap: 20px; flex-wrap: wrap; }
+        footer a { color: rgba(255, 255, 255, 0.75); text-decoration: none; }
+        footer a:hover { color: white; text-decoration: underline; }
+
+        @media (max-width: 640px) {
+            .logo span { font-size: 1.1rem; }
+            .logo img { height: 40px; width: 40px; }
+            .nav-links a { padding: 8px 10px; }
+            .nav-links a.nav-privacy { display: none; }
+            .doc { padding-top: 32px; }
+            .doc h1 { font-size: 1.8rem; }
+        }
+        @media (max-width: 420px) {
+            /* Icon only: the wordmark does not fit beside Help and Download. */
+            .logo span { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="{{ '/' | relative_url }}" class="logo">
+                <img src="{{ '/images/icon.png' | relative_url }}" alt="">
+                <span>Acutis Firewall</span>
+            </a>
+            <div class="nav-links">
+                <a href="{{ '/help.html' | relative_url }}">Help</a>
+                <a href="{{ '/privacy-policy.html' | relative_url }}" class="nav-privacy">Privacy</a>
+                <a href="https://github.com/phasnox/acutis_firewall_android/releases/latest" class="nav-cta">Download</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="doc">
+        {{ content }}
+    </main>
+
+    <footer>
+        <div class="container footer-row">
+            <span>Free, open-source parental control for Android.</span>
+            <nav>
+                <a href="{{ '/help.html' | relative_url }}">Help</a>
+                <a href="{{ '/privacy-policy.html' | relative_url }}">Privacy Policy</a>
+                <a href="https://github.com/phasnox/acutis_firewall_android">GitHub</a>
+                <a href="mailto:acutis@castillo.sh">Contact</a>
+            </nav>
+        </div>
+    </footer>
+</body>
+</html>
