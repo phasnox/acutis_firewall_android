@@ -207,6 +207,11 @@ class FirewallVpnService : VpnService() {
                     runVpnLoop()
                 } else {
                     Log.e(TAG, "Failed to establish VPN")
+                    // Reached when consent was revoked or another VPN holds the slot.
+                    // Automatic starts (boot, update restore) arrive as
+                    // startForegroundService(), so leaving the service alive without
+                    // startForeground() would be killed for the missing notification.
+                    stopSelf()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting VPN", e)

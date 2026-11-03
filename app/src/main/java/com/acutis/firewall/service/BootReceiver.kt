@@ -22,24 +22,41 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            val entryPoint = EntryPointAccessors.fromApplication(
-                context.applicationContext,
-                BootReceiverEntryPoint::class.java
-            )
-            val settingsDataStore = entryPoint.settingsDataStore()
+        val afterUpdate = intent.action == Intent.ACTION_MY_PACKAGE_REPLACED
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED && !afterUpdate) return
 
-            CoroutineScope(Dispatchers.IO).launch {
-                val autoStart = settingsDataStore.autoStartEnabled.first()
-                val wasEnabled = settingsDataStore.firewallEnabled.first()
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            BootReceiverEntryPoint::class.java
+        )
+        val settingsDataStore = entryPoint.settingsDataStore()
 
-                if (autoStart && wasEnabled) {
-                    val vpnIntent = Intent(context, FirewallVpnService::class.java).apply {
-                        action = FirewallVpnService.ACTION_START
-                    }
-                    context.startForegroundService(vpnIntent)
+        CoroutineScope(Dispatchers.IO).launch {
+            val wasEnabled = settingsDataStore.firewallEnabled.first()
+            // An update replaces the package and kills the process, so the VPN dies
+            // with it and START_STICKY does not bring it back: the app then claims
+            // "Firewall is enabled" while nothing is filtered until the shield is
+            // toggled twice. Restore what was on, regardless of autoStart - that
+            // setting is about booting, and protection was already running.
+            val autoStart = if (afterUpdate) false else settingsDataStore.autoStartEnabled.first()
+
+            if (shouldRestoreVpn(afterUpdate, autoStart, wasEnabled)) {
+                val vpnIntent = Intent(context, FirewallVpnService::class.java).apply {
+                    action = FirewallVpnService.ACTION_START
                 }
+                context.startForegroundService(vpnIntent)
             }
         }
     }
 }
+
+/**
+ * Whether an unsolicited event should bring the VPN back. Never starts protection the
+ * user had turned off. A package replacement restores it because it was already
+ * running; a boot also honours the auto-start setting.
+ */
+internal fun shouldRestoreVpn(
+    afterPackageReplace: Boolean,
+    autoStartEnabled: Boolean,
+    firewallWasEnabled: Boolean
+): Boolean = firewallWasEnabled && (afterPackageReplace || autoStartEnabled)
