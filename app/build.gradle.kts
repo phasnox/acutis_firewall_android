@@ -13,8 +13,8 @@ android {
         applicationId = "com.acutis.firewall"
         minSdk = 29
         targetSdk = 35
-        versionCode = 10007
-        versionName = "1.0.7"
+        versionCode = 10008
+        versionName = "1.0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

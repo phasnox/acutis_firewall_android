@@ -1,0 +1,1 @@
+• Fix: protection now restarts by itself after an app update - it used to stop filtering while still showing "Firewall is enabled", until the shield was toggled twice
