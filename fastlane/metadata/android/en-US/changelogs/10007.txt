@@ -1,0 +1,3 @@
+• New: Network > DNS server - pick your own IPv4 or IPv6 resolver, or keep the automatic one
+• Uninstall protection now alerts you even after app storage is cleared, and no longer claims the app cannot be uninstalled
+• "Forgot PIN?" now links to a step-by-step guide
