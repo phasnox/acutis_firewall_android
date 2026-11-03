@@ -15,3 +15,7 @@ local.properties
 *.jks
 *.keystore
 /play-store
+
+# Release signing (see PLAY-STORE.md)
+/keystore.properties
+/.kotlin

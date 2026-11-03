@@ -75,7 +75,7 @@ A parental control Android app that blocks adult and dangerous content using a l
 ### Architecture
 - **Language**: Kotlin
 - **Min SDK**: 29 (Android 10)
-- **Target SDK**: 35 (Android 15)
+- **Target SDK**: 36 (Android 16)
 - **UI**: Jetpack Compose with Material 3
 - **Database**: Room for blocklists and time rules
 - **Preferences**: Encrypted DataStore for PIN storage

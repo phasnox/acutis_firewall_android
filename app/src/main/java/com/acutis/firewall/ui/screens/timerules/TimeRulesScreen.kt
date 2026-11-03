@@ -125,7 +125,7 @@ private fun TimeRuleItem(
 ) {
     val targetName = when {
         rule.domain != null -> rule.domain
-        rule.category != null -> "Category: ${rule.category.name}"
+        rule.category != null -> "Category: ${categoryLabel(rule.category)}"
         rule.customListId != null -> {
             val listName = customLists.find { it.id == rule.customListId }?.name ?: "Unknown List"
             "List: $listName"
@@ -180,6 +180,17 @@ private fun TimeRuleItem(
         }
     }
 }
+
+@Composable
+private fun categoryLabel(category: BlockCategory): String = stringResource(
+    when (category) {
+        BlockCategory.ADULT -> R.string.adult_content
+        BlockCategory.MALWARE -> R.string.malware
+        BlockCategory.GAMBLING -> R.string.gambling
+        BlockCategory.SOCIAL_MEDIA -> R.string.social_media
+        BlockCategory.CUSTOM -> R.string.custom_blocklist
+    }
+)
 
 private fun buildRuleDescription(rule: TimeRule): String {
     val action = if (rule.action == TimeRuleAction.BLOCK) "Block" else "Allow"

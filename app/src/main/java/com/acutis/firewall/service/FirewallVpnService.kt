@@ -114,18 +114,30 @@ class FirewallVpnService : VpnService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startVpn()
+            ACTION_START -> {
+                // startForegroundService() gives the service about five seconds to post
+                // its notification. Post it before any database or tunnel work: on a
+                // cold start after an app update that work can outlast the window and
+                // the process is killed with ForegroundServiceDidNotStartInTimeException.
+                startForeground(NOTIFICATION_ID, createNotification())
+                startVpn()
+            }
             ACTION_STOP -> handleStopRequest(
                 intent?.getBooleanExtra(EXTRA_PIN_VERIFIED, false) ?: false
             )
             ACTION_REFRESH_BLOCKLIST -> refreshBlocklist()
             ACTION_REFRESH_DNS -> refreshDns()
             null -> {
-                // Service was restarted by the system, check if we should be running
+                // Service was restarted by the system, check if we should be running.
+                // A sticky restart of a foreground service is expected to restore its
+                // notification promptly, so do that before reading preferences.
+                startForeground(NOTIFICATION_ID, createNotification())
                 serviceScope.launch {
                     if (settingsDataStore.isFirewallEnabled() && !isRunning) {
                         Log.d(TAG, "Service restarted by system, restarting VPN")
                         startVpn()
+                    } else if (!settingsDataStore.isFirewallEnabled()) {
+                        stopSelf()
                     }
                 }
             }
@@ -197,7 +209,8 @@ class FirewallVpnService : VpnService() {
 
                 if (vpnInterface != null) {
                     isRunning = true
-                    startForeground(NOTIFICATION_ID, createNotification())
+                    // The notification was already posted in onStartCommand() so the
+                    // foreground-service deadline is met before this slower setup.
                     settingsDataStore.setFirewallEnabled(true)
                     Log.d(TAG, "VPN established successfully")
 

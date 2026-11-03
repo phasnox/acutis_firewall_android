@@ -41,7 +41,7 @@
     <ul>
         <li>Intercept DNS queries locally on your device</li>
         <li>Block requests to domains on your configured blocklists</li>
-        <li>Forward allowed DNS queries to Cloudflare's public DNS (1.1.1.1)</li>
+        <li>Forward allowed DNS queries to the DNS resolver your device already uses, or to a custom resolver you configure</li>
     </ul>
     <p><strong>Important:</strong> All filtering happens entirely on your device. No DNS queries, browsing data, or personal information is sent to our servers because we do not operate any servers.</p>
 
@@ -56,9 +56,8 @@
     </ul>
     <p>This data never leaves your device and is deleted when you uninstall the app.</p>
 
-    <h2>Third-Party Services</h2>
-    <p>The app forwards allowed DNS queries to Cloudflare's public DNS service (1.1.1.1). Cloudflare's privacy policy applies to DNS resolution. We chose Cloudflare for their commitment to privacy - they do not sell DNS data and purge logs within 24 hours.</p>
-    <p>For more information, see <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's Privacy Policy</a>.</p>
+    <h2>Upstream DNS</h2>
+    <p>Allowed DNS queries are forwarded to the resolver your device already uses on the active network (for example your home router or mobile carrier), captured before the local VPN starts. If you set a custom DNS server in Settings &rarr; Network, queries go to that server instead. We do not operate a resolver and never receive your queries; the privacy policy of whichever resolver you use applies.</p>
 
     <h2>Blocklist Sources</h2>
     <p>The app downloads blocklists from the following open-source projects:</p>

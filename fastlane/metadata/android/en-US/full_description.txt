@@ -21,7 +21,7 @@ Acutis Firewall is a parental control app that protects your family by blocking 
 <b>Privacy First</b>
 • All filtering happens on your device - no data sent to external servers
 • No analytics, tracking, or data collection
-• DNS queries go directly to your system DNS or Cloudflare
+• DNS queries go to your network's resolver or one you choose
 • PIN stored with Android's encrypted storage
 
 <b>How It Works</b>

@@ -49,6 +49,14 @@
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
+            <!--
+                Play requires the specialUse subtype to be declared in the manifest so
+                reviewers can see why this type is needed; it must match the foreground
+                service declaration in Play Console.
+            -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Local DNS filtering firewall that keeps running while parental-control protection is enabled" />
             <meta-data
                 android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
                 android:value="true" />

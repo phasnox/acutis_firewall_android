@@ -28,9 +28,11 @@ class BlocklistDownloader @Inject constructor(
             "https://raw.githubusercontent.com/4skinSkywalker/Anti-Porn-HOSTS-File/master/HOSTS.txt"
         )
 
-        // Malware/phishing blocklists
+        // Malware/phishing blocklists. URLhaus retired its public hostfile download
+        // (urlhaus.abuse.ch/downloads/hostfile/ now answers 410 Gone); this mirror is
+        // regenerated from the same feed.
         val MALWARE_LISTS = listOf(
-            "https://urlhaus.abuse.ch/downloads/hostfile/",
+            "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-hosts.txt",
             "https://raw.githubusercontent.com/StevenBlack/hosts/master/data/StevenBlack/hosts"
         )
 

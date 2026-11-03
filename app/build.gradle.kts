@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -5,16 +7,48 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+// Release signing comes from keystore.properties (local) or the KEYSTORE_* / KEY_*
+// environment variables (CI). Without it, release artifacts stay unsigned, which is
+// fine for local verification but unacceptable for Play uploads.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingValue(property: String, env: String): String? =
+    keystoreProperties.getProperty(property) ?: System.getenv(env)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "KEYSTORE_FILE")
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.exists() }
+val releaseStorePassword = signingValue("storePassword", "KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "KEY_PASSWORD")
+val releaseSigningSecrets = listOfNotNull(releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+val hasReleaseSigning = releaseStoreFile != null && releaseSigningSecrets.size == 3
+
+// A CI job that loses one secret must not quietly publish an unsigned bundle.
+if (releaseSigningSecrets.isNotEmpty() && !hasReleaseSigning) {
+    throw GradleException(
+        "Release signing is partially configured. Missing: " +
+            (if (releaseStoreFile == null) "keystore file" else "store password, key alias or key password") +
+            ". Set all of storeFile/storePassword/keyAlias/keyPassword in keystore.properties, " +
+            "or KEYSTORE_FILE/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD in the environment."
+    )
+}
+
 android {
     namespace = "com.acutis.firewall"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.acutis.firewall"
         minSdk = 29
-        targetSdk = 35
-        versionCode = 10008
-        versionName = "1.0.8"
+        targetSdk = 36
+        versionCode = 10009
+        versionName = "1.0.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -22,8 +56,20 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

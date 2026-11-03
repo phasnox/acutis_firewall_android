@@ -1,0 +1,5 @@
+• Android 16 support
+• Protection restores itself after app updates
+• Optional custom upstream DNS server
+• Optional uninstall protection with a parent PIN
+• Donate to the project with Bitcoin from Settings
