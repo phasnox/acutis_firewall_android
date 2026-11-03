@@ -61,6 +61,17 @@
     <string name="dismiss">Dismiss</string>
     <string name="pin_required_to_change">PIN required to change this</string>
 
+    <!-- Donation -->
+    <string name="support_title">Support the project</string>
+    <string name="support_description">Acutis Firewall is free, with no ads and no tracking. If it helps your family, you can support development with Bitcoin.</string>
+    <string name="bitcoin_address" translatable="false">bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce</string>
+    <string name="copy_address">Copy address</string>
+    <string name="address_copied">Address copied to clipboard</string>
+    <string name="open_in_wallet">Open wallet</string>
+    <string name="no_bitcoin_wallet">No Bitcoin wallet app installed. The address was copied instead.</string>
+    <string name="donation_instructions">Donation instructions</string>
+    <string name="donate_url" translatable="false">https://acutis.castillo.sh/donate</string>
+
     <!-- DNS server -->
     <string name="network">Network</string>
     <string name="dns_server">DNS server</string>

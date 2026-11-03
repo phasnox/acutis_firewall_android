@@ -653,6 +653,103 @@
             color: white;
         }
 
+        /* Donation */
+        .donate-section {
+            background: var(--bg-soft);
+        }
+
+        .donate-card {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 48px;
+            align-items: center;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 48px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .donate-copy h2 {
+            font-size: clamp(1.6rem, 3vw, 2.1rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin-bottom: 16px;
+        }
+
+        .donate-copy p {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .donate-steps {
+            padding-left: 20px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .donate-steps li {
+            margin-bottom: 8px;
+        }
+
+        .donate-steps a,
+        .donate-fine a {
+            color: var(--brand);
+        }
+
+        .donate-fine {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 0;
+        }
+
+        .donate-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-soft);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+        }
+
+        .donate-panel img {
+            width: 220px;
+            height: 220px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: white;
+            display: block;
+        }
+
+        .donate-panel code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            text-align: center;
+            word-break: break-all;
+            color: var(--text);
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            max-width: 100%;
+        }
+
+        .donate-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .donate-actions .btn {
+            padding: 12px 20px;
+            font-size: 0.95rem;
+        }
+
         /* Footer */
         footer {
             background: var(--bg-darker);
@@ -766,6 +863,12 @@
 
             .screenshot-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            .donate-card {
+                grid-template-columns: 1fr;
+                gap: 32px;
+                padding: 36px;
             }
         }
 
@@ -972,6 +1075,32 @@
         </div>
     </section>
 
+    <section class="section donate-section" id="donate">
+        <div class="container">
+            <div class="donate-card">
+                <div class="donate-copy">
+                    <span class="section-eyebrow">Support the project</span>
+                    <h2>Free for every family, funded by donations</h2>
+                    <p>Acutis Firewall has no ads, no accounts and no paid tier. Donations pay for test devices, blocklist hosting and the time spent keeping the app working on new Android releases.</p>
+                    <ol class="donate-steps">
+                        <li>Scan the QR code with a Bitcoin wallet, or tap <strong>Open in wallet</strong>.</li>
+                        <li>Alternatively, copy the address and paste it into any wallet that supports <code>bc1q…</code> addresses.</li>
+                        <li>Send any amount, then check it arrived on <a href="https://mempool.space/address/bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce" target="_blank" rel="noopener">mempool.space</a>.</li>
+                    </ol>
+                    <p class="donate-fine">Bitcoin mainnet only. <a href="donate.html">Full donation instructions</a>.</p>
+                </div>
+                <div class="donate-panel">
+                    <img src="images/bitcoin-donate-qr.png" width="220" height="220" alt="QR code for the Acutis Firewall Bitcoin donation address">
+                    <code id="btc-address">bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce</code>
+                    <div class="donate-actions">
+                        <a class="btn btn-primary" href="bitcoin:bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce">Open in wallet</a>
+                        <button class="btn btn-secondary" id="copy-btc" type="button">Copy address</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section class="cta-section">
         <div class="container">
             <div class="cta-card">
@@ -1007,6 +1136,7 @@
                         <a href="help.html">Help</a>
                         <a href="forgot-pin.html">Forgot your PIN?</a>
                         <a href="privacy-policy.html">Privacy Policy</a>
+                        <a href="donate.html">Donate with Bitcoin</a>
                         <a href="https://github.com/phasnox/acutis_firewall_android">GitHub</a>
                         <a href="mailto:acutis@castillo.sh">Contact</a>
                     </div>
@@ -1033,6 +1163,37 @@
                 });
             })
             .catch(() => {});
+
+        // Copy the donation address; clipboard API needs a secure context, so fall
+        // back to a hidden textarea for plain-http previews.
+        const copyButton = document.getElementById('copy-btc');
+        const addressEl = document.getElementById('btc-address');
+        if (copyButton && addressEl) {
+            const address = addressEl.textContent.trim();
+            copyButton.addEventListener('click', () => {
+                const done = (label) => {
+                    copyButton.textContent = label;
+                    setTimeout(() => { copyButton.textContent = 'Copy address'; }, 2000);
+                };
+                const fallback = () => {
+                    const area = document.createElement('textarea');
+                    area.value = address;
+                    area.setAttribute('readonly', '');
+                    area.style.position = 'fixed';
+                    area.style.opacity = '0';
+                    document.body.appendChild(area);
+                    area.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(area);
+                    done(ok ? 'Copied!' : 'Copy failed');
+                };
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(address).then(() => done('Copied!'), fallback);
+                } else {
+                    fallback();
+                }
+            });
+        }
     </script>
 </body>
 </html>

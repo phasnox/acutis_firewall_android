@@ -11,6 +11,9 @@
   <img src="https://img.shields.io/badge/Android-10%2B-brightgreen" alt="Android 10+"/>
   <img src="https://img.shields.io/badge/Kotlin-1.9-purple" alt="Kotlin"/>
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="License"/>
+  <a href="https://acutis.castillo.sh/donate">
+    <img src="https://img.shields.io/badge/Bitcoin-donate-F7931A?logo=bitcoin&amp;logoColor=white" alt="Donate Bitcoin"/>
+  </a>
 </p>
 
 A parental control Android app that blocks adult and dangerous content using a local VPN-based DNS filter. Parents can protect settings with a PIN, manage custom blocklists, and set time-based access rules.
@@ -137,6 +140,28 @@ cd acutis_firewall_android
 - **No external servers** - DNS queries go directly to your network's DNS server, or to the custom resolver you configure, and never through us
 - **No analytics** - The app does not track usage or behavior
 - **Encrypted PIN** - PIN is stored using Android's EncryptedSharedPreferences
+
+## Support the project
+
+Acutis Firewall is free, has no ads, no accounts and no analytics. Donations pay for
+test devices, blocklist hosting and the time spent keeping the app working on new
+Android releases. Every contribution is optional; the app stays complete without one.
+
+<p align="center">
+  <img src="docs/images/bitcoin-donate-qr.png" width="180" alt="Bitcoin donation QR code"/>
+</p>
+
+**Bitcoin (mainnet):** `bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce`
+
+- Scan the QR code with a phone wallet such as BlueWallet, or paste the address into a
+  desktop wallet such as Electrum, Sparrow, Muun or Bitcoin Core.
+- Send any amount. No account, email or name is needed.
+- Confirm the address starts with `bc1q` and ends with `tu2quce` before sending.
+- Check a donation arrived on
+  [mempool.space](https://mempool.space/address/bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce).
+
+Step-by-step instructions, including fee and safety notes:
+[acutis.castillo.sh/donate](https://acutis.castillo.sh/donate).
 
 ## License
 

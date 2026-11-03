@@ -1,10 +1,14 @@
 package com.acutis.firewall.ui.screens.settings
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -14,8 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -24,6 +33,7 @@ import com.acutis.firewall.R
 import com.acutis.firewall.service.parseDnsServerAddress
 import com.acutis.firewall.ui.components.PinDialog
 import com.acutis.firewall.ui.components.PinSetupDialog
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -257,6 +267,21 @@ fun SettingsScreen(
             }
 
             item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                SettingsSection(title = stringResource(R.string.support_title))
+            }
+
+            item {
+                DonationItem(
+                    address = stringResource(R.string.bitcoin_address),
+                    instructionsUrl = stringResource(R.string.donate_url)
+                )
+            }
+
+            item {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -328,6 +353,118 @@ private fun DnsServerDialog(
             }
         }
     )
+}
+
+@Composable
+private fun DonationItem(address: String, instructionsUrl: String) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val copiedMessage = stringResource(R.string.address_copied)
+    val noWalletMessage = stringResource(R.string.no_bitcoin_wallet)
+    var message by remember { mutableStateOf<String?>(null) }
+
+    // Feedback clears itself; keeping it on screen would make the row look stale.
+    LaunchedEffect(message) {
+        if (message != null) {
+            delay(3000)
+            message = null
+        }
+    }
+
+    fun copyAddress(): Boolean {
+        val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return false
+        clipboard.setPrimaryClip(ClipData.newPlainText("Bitcoin address", address))
+        return true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.support_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SelectionContainer {
+                Text(
+                    text = address,
+                    // 42 characters have to stay on one line at 360dp width; monospace at
+                    // bodySmall with zero tracking is the largest size that fits.
+                    style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 0.sp),
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { message = if (copyAddress()) copiedMessage else null },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.copy_address), maxLines = 1)
+            }
+            Button(
+                onClick = {
+                    val opened = runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, "bitcoin:$address".toUri()))
+                    }.isSuccess
+                    if (!opened) {
+                        copyAddress()
+                        message = noWalletMessage
+                    }
+                },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AccountBalanceWallet,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.open_in_wallet), maxLines = 1)
+            }
+        }
+
+        message?.let { status ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = status,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        TextButton(
+            onClick = { uriHandler.openUri(instructionsUrl) },
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+        ) {
+            Text(stringResource(R.string.donation_instructions))
+        }
+    }
 }
 
 @Composable

@@ -1,0 +1,3 @@
+# GitHub has no Bitcoin funding option, so the Sponsor button opens the project's
+# donation page, which carries the address and instructions.
+custom: ["https://acutis.castillo.sh/donate"]
