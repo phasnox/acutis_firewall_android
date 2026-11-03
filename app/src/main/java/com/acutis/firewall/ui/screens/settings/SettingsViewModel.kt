@@ -1,5 +1,6 @@
 package com.acutis.firewall.ui.screens.settings
 
+import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,7 +8,9 @@ import com.acutis.firewall.admin.UninstallProtectionManager
 import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.preferences.SettingsDataStore
+import com.acutis.firewall.service.FirewallVpnService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -16,9 +19,11 @@ data class SettingsUiState(
     val isPinEnabled: Boolean = false,
     val hasPin: Boolean = false,
     val autoStartEnabled: Boolean = true,
+    val customDnsServer: String? = null,
     val showPinSetupDialog: Boolean = false,
     val showPinChangeDialog: Boolean = false,
     val showPinVerifyDialog: Boolean = false,
+    val showDnsDialog: Boolean = false,
     val pinError: Boolean = false,
     val pendingAction: SettingsPendingAction? = null,
     val isUninstallProtectionActive: Boolean = false,
@@ -37,6 +42,7 @@ enum class SettingsPendingAction {
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val settingsDataStore: SettingsDataStore,
     private val blocklistDownloader: BlocklistDownloader,
     private val uninstallProtection: UninstallProtectionManager
@@ -49,12 +55,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 settingsDataStore.pinEnabled,
-                settingsDataStore.autoStartEnabled
-            ) { pinEnabled, autoStart ->
+                settingsDataStore.autoStartEnabled,
+                settingsDataStore.customDnsServer
+            ) { pinEnabled, autoStart, customDnsServer ->
                 _uiState.value.copy(
                     isPinEnabled = pinEnabled,
                     hasPin = settingsDataStore.hasPin(),
-                    autoStartEnabled = autoStart
+                    autoStartEnabled = autoStart,
+                    customDnsServer = customDnsServer
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -206,6 +214,39 @@ class SettingsViewModel @Inject constructor(
     fun onAutoStartToggle(enabled: Boolean) {
         viewModelScope.launch {
             settingsDataStore.setAutoStartEnabled(enabled)
+        }
+    }
+
+    fun onDnsServerClick() {
+        _uiState.value = _uiState.value.copy(showDnsDialog = true)
+    }
+
+    fun dismissDnsServerDialog() {
+        _uiState.value = _uiState.value.copy(showDnsDialog = false)
+    }
+
+    /**
+     * Persists the upstream override (null = automatic) and tells the running VPN to
+     * pick it up. The preference write does not depend on the service starting: with
+     * the firewall off the next start reads the same value.
+     */
+    fun onDnsServerSave(dnsServer: String?) {
+        val normalized = dnsServer?.trim()?.takeIf { it.isNotEmpty() }
+        viewModelScope.launch {
+            settingsDataStore.setCustomDnsServer(normalized)
+            notifyDnsServerChanged()
+            _uiState.value = _uiState.value.copy(showDnsDialog = false)
+        }
+    }
+
+    private fun notifyDnsServerChanged() {
+        val intent = Intent(context, FirewallVpnService::class.java).apply {
+            action = FirewallVpnService.ACTION_REFRESH_DNS
+        }
+        try {
+            context.startService(intent)
+        } catch (e: Exception) {
+            // Service might not be running, that's OK
         }
     }
 

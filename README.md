@@ -84,7 +84,7 @@ A parental control Android app that blocks adult and dangerous content using a l
 1. The app creates a local VPN tunnel using Android's `VpnService`
 2. All DNS queries are routed through the VPN
 3. Queries for blocked domains return NXDOMAIN (domain not found)
-4. Allowed queries are forwarded to upstream DNS (Cloudflare 1.1.1.1)
+4. Allowed queries are forwarded to upstream DNS: the active network's DNS server captured before the VPN starts, falling back to Cloudflare (1.1.1.1). Settings > Network > DNS server can override it with a fixed IPv4 or IPv6 address; leaving the field blank restores the automatic server
 5. Time rules are evaluated in real-time for dynamic blocking
 
 ## Building
@@ -134,7 +134,7 @@ cd acutis_firewall_android
 ## Privacy
 
 - **No data collection** - All filtering happens locally on your device
-- **No external servers** - DNS queries go directly to Cloudflare (1.1.1.1)
+- **No external servers** - DNS queries go directly to your network's DNS server, or to the custom resolver you configure, and never through us
 - **No analytics** - The app does not track usage or behavior
 - **Encrypted PIN** - PIN is stored using Android's EncryptedSharedPreferences
 

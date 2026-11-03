@@ -1,5 +1,6 @@
 package com.acutis.firewall.viewmodel
 
+import android.content.Context
 import app.cash.turbine.test
 import com.acutis.firewall.blocklist.BlocklistDownloader
 import com.acutis.firewall.data.db.entities.BlockCategory
@@ -20,6 +21,7 @@ import com.google.common.truth.Truth.assertThat
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
 
+    private lateinit var context: Context
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var blocklistDownloader: BlocklistDownloader
     private lateinit var uninstallProtection: UninstallProtectionManager
@@ -31,6 +33,7 @@ class SettingsViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
 
+        context = mockk(relaxed = true)
         settingsDataStore = mockk(relaxed = true)
         blocklistDownloader = mockk(relaxed = true)
         uninstallProtection = mockk(relaxed = true)
@@ -38,6 +41,7 @@ class SettingsViewModelTest {
 
         every { settingsDataStore.pinEnabled } returns flowOf(false)
         every { settingsDataStore.autoStartEnabled } returns flowOf(true)
+        every { settingsDataStore.customDnsServer } returns flowOf(null)
         every { settingsDataStore.hasPin() } returns false
     }
 
@@ -47,7 +51,7 @@ class SettingsViewModelTest {
     }
 
     private fun createViewModel(): SettingsViewModel {
-        return SettingsViewModel(settingsDataStore, blocklistDownloader, uninstallProtection)
+        return SettingsViewModel(context, settingsDataStore, blocklistDownloader, uninstallProtection)
     }
 
     @Test
@@ -62,6 +66,8 @@ class SettingsViewModelTest {
             assertThat(state.isPinEnabled).isFalse()
             assertThat(state.hasPin).isFalse()
             assertThat(state.autoStartEnabled).isTrue()
+            assertThat(state.customDnsServer).isNull()
+            assertThat(state.showDnsDialog).isFalse()
             assertThat(state.showPinSetupDialog).isFalse()
             assertThat(state.showPinVerifyDialog).isFalse()
             cancelAndIgnoreRemainingEvents()
@@ -284,6 +290,45 @@ class SettingsViewModelTest {
 
         // Then
         coVerify { settingsDataStore.setAutoStartEnabled(false) }
+    }
+
+    @Test
+    fun `saving a custom DNS server trims and persists it`() = runTest {
+        // Given
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.onDnsServerClick()
+
+        // When
+        viewModel.onDnsServerSave(" 9.9.9.9 ")
+        advanceUntilIdle()
+
+        // Then
+        coVerify(exactly = 1) { settingsDataStore.setCustomDnsServer("9.9.9.9") }
+        viewModel.uiState.test {
+            assertThat(awaitItem().showDnsDialog).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `saving a blank DNS server clears the override and closes the dialog`() = runTest {
+        // Given
+        every { settingsDataStore.customDnsServer } returns flowOf("9.9.9.9")
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.onDnsServerClick()
+
+        // When
+        viewModel.onDnsServerSave(null)
+        advanceUntilIdle()
+
+        // Then
+        coVerify(exactly = 1) { settingsDataStore.setCustomDnsServer(null) }
+        viewModel.uiState.test {
+            assertThat(awaitItem().showDnsDialog).isFalse()
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test

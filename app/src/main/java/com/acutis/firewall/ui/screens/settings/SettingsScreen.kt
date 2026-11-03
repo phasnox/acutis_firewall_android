@@ -21,6 +21,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.acutis.firewall.R
+import com.acutis.firewall.service.parseDnsServerAddress
 import com.acutis.firewall.ui.components.PinDialog
 import com.acutis.firewall.ui.components.PinSetupDialog
 
@@ -95,6 +96,14 @@ fun SettingsScreen(
         )
     }
 
+    if (uiState.showDnsDialog) {
+        DnsServerDialog(
+            currentDnsServer = uiState.customDnsServer,
+            onDismiss = viewModel::dismissDnsServerDialog,
+            onSave = viewModel::onDnsServerSave
+        )
+    }
+
     if (uiState.lastDownloadResult != null) {
         AlertDialog(
             onDismissRequest = viewModel::clearDownloadResult,
@@ -140,6 +149,23 @@ fun SettingsScreen(
                     },
                     isLoading = uiState.isDownloading,
                     onClick = viewModel::downloadBlocklists
+                )
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                SettingsSection(title = stringResource(R.string.network))
+            }
+
+            item {
+                SettingsClickableItem(
+                    icon = Icons.Default.Dns,
+                    title = stringResource(R.string.dns_server),
+                    description = uiState.customDnsServer ?: stringResource(R.string.dns_server_automatic),
+                    onClick = viewModel::onDnsServerClick
                 )
             }
 
@@ -244,6 +270,64 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun DnsServerDialog(
+    currentDnsServer: String?,
+    onDismiss: () -> Unit,
+    onSave: (String?) -> Unit
+) {
+    // Seeded only when the dialog enters composition, so typing survives recomposition.
+    var draft by remember { mutableStateOf(currentDnsServer.orEmpty()) }
+    var isError by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(R.string.dns_server_dialog_title))
+        },
+        text = {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = {
+                    draft = it
+                    isError = false
+                },
+                label = { Text(stringResource(R.string.dns_server)) },
+                singleLine = true,
+                isError = isError,
+                supportingText = {
+                    Text(
+                        stringResource(
+                            if (isError) R.string.dns_server_invalid else R.string.dns_server_hint
+                        )
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val trimmed = draft.trim()
+                    when {
+                        // Blank means automatic, whatever the row shows now.
+                        trimmed.isEmpty() -> onSave(null)
+                        parseDnsServerAddress(trimmed) != null -> onSave(trimmed)
+                        else -> isError = true
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 @Composable

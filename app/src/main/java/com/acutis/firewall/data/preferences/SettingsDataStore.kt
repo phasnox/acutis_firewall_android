@@ -59,6 +59,7 @@ class SettingsDataStore @Inject constructor(
         private val UNINSTALL_PROTECTION_ENABLED = booleanPreferencesKey("uninstall_protection_enabled")
         private val UNINSTALL_PROTECTION_REMOVED = booleanPreferencesKey("uninstall_protection_removed")
         private val UNINSTALL_PROTECTION_SELF_DISABLE = booleanPreferencesKey("uninstall_protection_self_disable")
+        private val CUSTOM_DNS_SERVER = stringPreferencesKey("custom_dns_server")
         private const val PIN_HASH_KEY = "pin_hash"
         private const val TAMPER_RECORD_CLASS = "com.acutis.firewall.admin.TamperRecord"
         private const val TAG = "SettingsDataStore"
@@ -90,6 +91,14 @@ class SettingsDataStore @Inject constructor(
 
     val autoStartEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[AUTO_START_ENABLED] ?: true
+    }
+
+    /**
+     * A null value means automatic: the active network's DNS server. A missing key
+     * is therefore the default mode, so upgrades need no migration.
+     */
+    val customDnsServer: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[CUSTOM_DNS_SERVER]
     }
 
     val lockdownModeDetected: Flow<Boolean> = dataStore.data.map { prefs ->
@@ -151,6 +160,16 @@ class SettingsDataStore @Inject constructor(
     suspend fun setAutoStartEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[AUTO_START_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setCustomDnsServer(dnsServer: String?) {
+        dataStore.edit { prefs ->
+            if (dnsServer == null) {
+                prefs.remove(CUSTOM_DNS_SERVER)
+            } else {
+                prefs[CUSTOM_DNS_SERVER] = dnsServer
+            }
         }
     }
 

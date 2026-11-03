@@ -19,6 +19,8 @@ import com.acutis.firewall.data.repository.TimeRuleRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
@@ -49,6 +51,7 @@ class FirewallVpnService : VpnService() {
         const val ACTION_START = "com.acutis.firewall.START_VPN"
         const val ACTION_STOP = "com.acutis.firewall.STOP_VPN"
         const val ACTION_REFRESH_BLOCKLIST = "com.acutis.firewall.REFRESH_BLOCKLIST"
+        const val ACTION_REFRESH_DNS = "com.acutis.firewall.REFRESH_DNS"
 
         /**
          * Set only by the in-app path that has already verified the PIN. Absent on
@@ -70,14 +73,37 @@ class FirewallVpnService : VpnService() {
         private val FALLBACK_DNS = InetAddress.getByName("1.1.1.1")
     }
 
-    // Upstream DNS server (system default or fallback)
+    // Upstream DNS server (custom override, else the cached automatic server)
     private var upstreamDns: InetAddress = FALLBACK_DNS
+
+    /**
+     * The automatic upstream, captured before the VPN changes the active network.
+     * Never re-read live: once the VPN is up it may be the active network, and asking
+     * it would return [INTERCEPT_DNS] and forward queries back into ourselves.
+     */
+    private var systemDns: InetAddress = FALLBACK_DNS
+
+    // Serializes selection so a stale startup snapshot cannot overwrite a refresh.
+    private val dnsMutex = Mutex()
 
     private fun getSystemDnsServers(): List<InetAddress> {
         val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val activeNetwork = connectivityManager.activeNetwork ?: return emptyList()
         val linkProperties = connectivityManager.getLinkProperties(activeNetwork) ?: return emptyList()
         return linkProperties.dnsServers
+    }
+
+    /**
+     * The user's upstream override, or null for automatic. An unparseable persisted
+     * value is logged and treated as automatic instead of blocking VPN startup.
+     */
+    private suspend fun getConfiguredDnsServer(): InetAddress? {
+        val configured = settingsDataStore.customDnsServer.first() ?: return null
+        val address = parseDnsServerAddress(configured)
+        if (address == null) {
+            Log.w(TAG, "Ignoring invalid custom DNS server: $configured")
+        }
+        return address
     }
 
     override fun onCreate() {
@@ -93,6 +119,7 @@ class FirewallVpnService : VpnService() {
                 intent?.getBooleanExtra(EXTRA_PIN_VERIFIED, false) ?: false
             )
             ACTION_REFRESH_BLOCKLIST -> refreshBlocklist()
+            ACTION_REFRESH_DNS -> refreshDns()
             null -> {
                 // Service was restarted by the system, check if we should be running
                 serviceScope.launch {
@@ -139,9 +166,13 @@ class FirewallVpnService : VpnService() {
         serviceScope.launch {
             try {
                 // Get system DNS before starting VPN (VPN will change network properties)
-                val systemDns = getSystemDnsServers().firstOrNull()
-                upstreamDns = systemDns ?: FALLBACK_DNS
-                Log.d(TAG, "Using upstream DNS: $upstreamDns")
+                val automaticDns = getSystemDnsServers().firstOrNull() ?: FALLBACK_DNS
+
+                dnsMutex.withLock {
+                    systemDns = automaticDns
+                    upstreamDns = getConfiguredDnsServer() ?: systemDns
+                    Log.d(TAG, "Using upstream DNS: $upstreamDns")
+                }
 
                 blockedDomains = loadBlockedDomains()
                 Log.d(TAG, "Loaded ${blockedDomains.size} blocked domains")
@@ -587,6 +618,20 @@ class FirewallVpnService : VpnService() {
             .addAction(R.drawable.ic_shield, getString(R.string.disable_firewall), stopPendingIntent)
             .setOngoing(true)
             .build()
+    }
+
+    /**
+     * Switches the upstream without touching interception. Deliberately not gated on
+     * [isRunning]: a save racing VPN establishment must still update the field, and a
+     * refresh while stopped is harmless because the next start rereads the preference.
+     */
+    private fun refreshDns() {
+        serviceScope.launch {
+            dnsMutex.withLock {
+                upstreamDns = getConfiguredDnsServer() ?: systemDns
+                Log.d(TAG, "Using upstream DNS: $upstreamDns")
+            }
+        }
     }
 
     fun refreshBlocklist() {

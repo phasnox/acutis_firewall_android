@@ -60,4 +60,12 @@
     <string name="incorrect_pin_attempts_left">Incorrect PIN \u2013 %1$d attempts left</string>
     <string name="dismiss">Dismiss</string>
     <string name="pin_required_to_change">PIN required to change this</string>
+
+    <!-- DNS server -->
+    <string name="network">Network</string>
+    <string name="dns_server">DNS server</string>
+    <string name="dns_server_automatic">Automatic (network default)</string>
+    <string name="dns_server_dialog_title">Custom DNS server</string>
+    <string name="dns_server_hint">IPv4 or IPv6. Leave blank to use automatic DNS.</string>
+    <string name="dns_server_invalid">Enter a valid IPv4 or IPv6 address</string>
 </resources>
