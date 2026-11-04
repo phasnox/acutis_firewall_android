@@ -14,7 +14,7 @@ credentials are provided.
 | Version code | `10009` |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 (Android 16) — required for new apps since 31 Aug 2026 |
-| Artifact | `app/build/outputs/bundle/release/app-release.aab` (CI renames it `acutis-firewall-<version>-signed.aab`) |
+| Artifact | `app/build/outputs/bundle/release/app-release.aab`; the signed `v1.0.9` assets are on the GitHub release and in `play-store/acutis-firewall-1.0.9-signed.aab` |
 
 Play accepts only the AAB, never an APK. Never reuse a version code: build `10010`
 for the next upload even if only the listing text changes.
@@ -50,8 +50,9 @@ bundletool validate --bundle app/build/outputs/bundle/release/app-release.aab
 `keytool -printcert -jarfile`) and check the certificate fingerprint matches your
 upload key.
 
-CI builds and signs the same artifacts for a `v1.0.9` tag. Repository secrets:
-`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
+The `v1.0.9` tag was built and signed by CI (same certificate as `v1.0.8`).
+Repository secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
+`KEY_PASSWORD`.
 
 ## 3. Store listing assets
 
@@ -121,8 +122,11 @@ User impact if the task is deferred or interrupted:
 > the service, filtering stops while the UI still says protection is on, which is
 > exactly the state a child could exploit.
 
-Demo video: record the shield tap, the VPN consent dialog, the ongoing notification,
-and a blocked domain. Upload it unlisted to YouTube and paste the link.
+Demo video: `docs/fgs-demo.mp4` is published at
+<https://acutis.castillo.sh/fgs-demo.mp4> and shows the shield tap, the VPN consent
+dialog, the transition to "Firewall is enabled" and the ongoing notification. Use
+that URL in the declaration, or upload the same file unlisted to YouTube if you
+prefer a YouTube link.
 
 ### Device admin explanation
 
