@@ -74,6 +74,20 @@ rejects (maximum dimension may not exceed twice the minimum). The replacements w
 captured on a Pixel 7 at 1080 × 1920 with full status-bar indicators and no
 notifications.
 
+Alt text for the Console:
+
+- Icon: “Acutis Firewall shield crest on a white background”
+- Feature graphic: “Acutis Firewall crest beside the text: Blocks adult and
+  dangerous content entirely on your device”
+- Screenshot 1: “Home screen with the shield active: Firewall is enabled, 131,184
+  sites blocked”
+- Screenshot 2: “Default blocklists with adult content, malware, gambling and
+  social media categories enabled”
+- Screenshot 3: “Time rules: a 30 minute daily limit for social media and a 60
+  minute block for youtube.com”
+- Screenshot 4: “Settings showing version 1.0.9 and the Bitcoin donation
+  section”
+
 ## 4. App content declarations
 
 Play will not let the app go to production until every section under **App content**
