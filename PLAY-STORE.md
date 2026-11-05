@@ -10,13 +10,13 @@ credentials are provided.
 | Item | Value |
 |------|-------|
 | Package | `com.acutis.firewall` |
-| Version name | `1.0.9` |
-| Version code | `10009` |
+| Version name | `1.0.10` |
+| Version code | `10010` |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 (Android 16) — required for new apps since 31 Aug 2026 |
-| Artifact | `app/build/outputs/bundle/release/app-release.aab`; the signed `v1.0.9` assets are on the GitHub release and in `play-store/acutis-firewall-1.0.9-signed.aab` |
+| Artifact | `app/build/outputs/bundle/release/app-release.aab`; CI publishes the signed `v1.0.10` assets on the GitHub release. Copy the AAB to `play-store/acutis-firewall-1.0.10-signed.aab` if keeping a local copy. |
 
-Play accepts only the AAB, never an APK. Never reuse a version code: build `10010`
+Play accepts only the AAB, never an APK. Never reuse a version code: build `10011`
 for the next upload even if only the listing text changes.
 
 ## 2. Signing
@@ -50,7 +50,7 @@ bundletool validate --bundle app/build/outputs/bundle/release/app-release.aab
 `keytool -printcert -jarfile`) and check the certificate fingerprint matches your
 upload key.
 
-The `v1.0.9` tag was built and signed by CI (same certificate as `v1.0.8`).
+The `v1.0.10` tag was built and signed by CI (same certificate as `v1.0.9`).
 Repository secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
 `KEY_PASSWORD`.
 
@@ -67,7 +67,7 @@ All files live in `fastlane/metadata/android/en-US/`, which is also the path
 | App icon | `images/icon.png` | 512 × 512, 32-bit PNG, ≤ 1 MB |
 | Feature graphic | `images/featureGraphic.png` | 1024 × 500, JPEG or 24-bit PNG, no alpha |
 | Phone screenshots | `images/phoneScreenshots/1..4.jpg` | 1080 × 1920 (9:16), ≥ 2 required |
-| Changelog | `changelogs/10009.txt` | Shown as "What's new" |
+| Changelog | `changelogs/10010.txt` | Shown as "What's new" |
 
 The previous screenshots were 686 px wide and 2.22:1 tall, which the Console
 rejects (maximum dimension may not exceed twice the minimum). The replacements were

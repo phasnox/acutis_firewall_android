@@ -200,6 +200,11 @@ class FirewallVpnService : VpnService() {
                     // Route only DNS server IPs through VPN
                     .addRoute(INTERCEPT_DNS, 32)
                     .addRoute("8.8.4.4", 32)
+                    // establish() returns a non-blocking tunnel by default. The packet
+                    // loop below relies on a blocking read; without this, read() returns
+                    // immediately when the queue is empty (0 or EAGAIN) and the loop
+                    // either exits or spins.
+                    .setBlocking(true)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     builder.setMetered(false)
@@ -251,10 +256,14 @@ class FirewallVpnService : VpnService() {
             while (isRunning && vpnInterface != null) {
                 try {
                     val length = inputStream.read(buffer)
-                    if (length > 0) {
-                        val packetData = buffer.copyOf(length)
-                        handlePacket(packetData, outputStream)
+                    if (length <= 0) {
+                        // EOF or an empty read means the tunnel is gone; continuing
+                        // would spin on an immediately-returning read.
+                        Log.d(TAG, "Tunnel read returned $length, stopping VPN loop")
+                        break
                     }
+                    val packetData = buffer.copyOf(length)
+                    handlePacket(packetData, outputStream)
                 } catch (e: Exception) {
                     if (isRunning) {
                         Log.e(TAG, "Error in VPN loop", e)
