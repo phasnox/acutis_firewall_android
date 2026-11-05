@@ -47,8 +47,8 @@ android {
         applicationId = "com.acutis.firewall"
         minSdk = 29
         targetSdk = 36
-        versionCode = 10010
-        versionName = "1.0.10"
+        versionCode = 10011
+        versionName = "1.0.11"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -79,6 +79,13 @@ android {
                 debugSymbolLevel = "FULL"
             }
         }
+    }
+
+    dependenciesInfo {
+        // F-Droid rejects APKs that carry AGP's opaque dependency-metadata signing
+        // block. The block only feeds Google Play's dependency analysis.
+        includeInApk = false
+        includeInBundle = false
     }
 
     compileOptions {
