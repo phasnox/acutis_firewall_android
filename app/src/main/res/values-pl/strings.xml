@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Acutis Firewall</string>
+    <string name="vpn_notification_title">Zapora sieciowa aktywna</string>
+    <string name="vpn_notification_text">Chroni Twoje urządzenie przed szkodliwymi treściami</string>
+    <string name="vpn_channel_name">Status zapory sieciowej</string>
+    <string name="vpn_channel_description">Pokazuje, kiedy zapora sieciowa jest aktywna</string>
+    <string name="enable_firewall">Włącz zaporę sieciową</string>
+    <string name="disable_firewall">Wyłącz zaporę sieciową</string>
+    <string name="firewall_enabled">Zapora sieciowa jest włączona</string>
+    <string name="firewall_disabled">Zapora sieciowa jest wyłączona</string>
+    <string name="blocked_sites">Zablokowane strony</string>
+    <string name="time_rules">Reguły czasowe</string>
+    <string name="settings">Ustawienia</string>
+    <string name="add_site">Dodaj stronę</string>
+    <string name="remove_site">Usuń stronę</string>
+    <string name="enter_domain">Wprowadź domenę</string>
+    <string name="pin_required">Wymagany kod PIN</string>
+    <string name="enter_pin">Wprowadź kod PIN</string>
+    <string name="set_pin">Ustaw kod PIN</string>
+    <string name="confirm_pin">Potwierdź kod PIN</string>
+    <string name="pin_mismatch">Kody PIN nie są zgodne</string>
+    <string name="incorrect_pin">Nieprawidłowy kod PIN</string>
+    <string name="forgot_pin">Nie pamiętasz kodu PIN?</string>
+    <string name="forgot_pin_url" translatable="false">https://acutis.castillo.sh/forgot-pin</string>
+    <string name="pin_set_success">Kod PIN został pomyślnie ustawiony</string>
+    <string name="enable_pin">Włącz ochronę kodem PIN</string>
+    <string name="change_pin">Zmień kod PIN</string>
+    <string name="adult_content">Treści dla dorosłych</string>
+    <string name="malware">Złośliwe oprogramowanie i phishing</string>
+    <string name="gambling">Hazard</string>
+    <string name="social_media">Media społecznościowe</string>
+    <string name="custom_blocklist">Niestandardowa lista blokowania</string>
+    <string name="default_blocklists">Domyślne listy blokowania</string>
+    <string name="sites_blocked_count">Zablokowane strony: %d</string>
+    <string name="add_time_rule">Dodaj regułę czasową</string>
+    <string name="daily_limit">Limit dzienny</string>
+    <string name="schedule">Harmonogram</string>
+    <string name="cancel">Anuluj</string>
+    <string name="save">Zapisz</string>
+    <string name="delete">Usuń</string>
+    <string name="home">Główna</string>
+
+    <!-- Uninstall protection -->
+    <string name="device_admin_label">Ochrona przed odinstalowaniem Acutis Firewall</string>
+    <string name="device_admin_description">Blokuje odinstalowanie aplikacji Acutis Firewall, gdy jest ona aktywna. Wyłączenie jej w Ustawieniach powoduje wygenerowanie alertu w Acutis Firewall. Aplikacja Acutis Firewall nie korzysta z żadnych innych funkcji administracji urządzeniem.</string>
+    <string name="uninstall_protection">Ochrona przed odinstalowaniem</string>
+    <string name="uninstall_protection_summary">Blokuj odinstalowanie tej aplikacji</string>
+    <string name="uninstall_protection_explanation">Acutis Firewall wymaga uprawnień administratora urządzenia, aby system Android blokował jej odinstalowanie. Aby ją usunąć, wyłącz tę opcję w Acutis Firewall przy użyciu kodu PIN. Funkcja ta nie zablokuje ekranu, nie zmieni hasła ani nie usunie żadnych danych.</string>
+    <string name="uninstall_protection_needs_pin_title">Najpierw ustaw kod PIN</string>
+    <string name="uninstall_protection_needs_pin_message">Ochrona przed odinstalowaniem jest odblokowywana kodem PIN rodzica. Ustaw kod PIN przed włączeniem tej funkcji.</string>
+    <string name="uninstall_protection_disable_warning">Usunięcie tej opcji pozwoli na odinstalowanie Acutis Firewall, a rodzic zostanie o tym powiadomiony. Aby zrobić to poprawnie, otwórz Acutis Firewall i wprowadź kod PIN rodzica w Ustawieniach.</string>
+    <string name="uninstall_protection_gate_title">Zapytaj rodzica</string>
+    <string name="uninstall_protection_gate_message">Wprowadź kod PIN rodzica, aby usunąć ochronę przed odinstalowaniem.</string>
+    <string name="uninstall_protection_removed_title">Ochrona przed odinstalowaniem została usunięta</string>
+    <string name="uninstall_protection_removed_message">Ktoś wyłączył uprawnienia administratora urządzenia dla Acutis Firewall, więc aplikację można teraz odinstalować. Włącz ochronę ponownie, aby zachować blokadę.</string>
+    <string name="uninstall_protection_turn_back_on">Włącz ponownie</string>
+    <string name="uninstall_protection_unavailable">To urządzenie nie obsługuje ochrony przed odinstalowaniem.</string>
+    <string name="uninstall_protection_disable_failed">Nie udało się wyłączyć ochrony przed odinstalowaniem. Usuń ją w Ustawienia &gt; Bezpieczeństwo &gt; Aplikacje administratora urządzenia.</string>
+    <string name="incorrect_pin_attempts_left">Nieprawidłowy kod PIN \u2013 Pozostało prób: %1$d</string>
+    <string name="dismiss">Odrzuć</string>
+    <string name="pin_required_to_change">Do zmiany tego ustawienia wymagany jest kod PIN</string>
+
+    <!-- Donation -->
+    <string name="support_title">Wesprzyj projekt</string>
+    <string name="support_description">Acutis Firewall jest bezpłatny, nie zawiera reklam ani skryptów śledzących. Jeśli pomaga Twojej rodzinie, możesz wesprzeć jego rozwój za pomocą Bitcoina.</string>
+    <string name="bitcoin_address" translatable="false">bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce</string>
+    <string name="copy_address">Kopiuj adres</string>
+    <string name="address_copied">Adres został skopiowany do schowka</string>
+    <string name="open_in_wallet">Otwórz w portfelu</string>
+    <string name="no_bitcoin_wallet">Brak zainstalowanej aplikacji portfela Bitcoin. Adres został skopiowany do schowka.</string>
+    <string name="donation_instructions">Instrukcje dotyczące darowizn</string>
+    <string name="donate_url" translatable="false">https://acutis.castillo.sh/donate</string>
+
+    <!-- DNS server -->
+    <string name="network">Sieć</string>
+    <string name="dns_server">Serwer DNS</string>
+    <string name="dns_server_automatic">Automatyczny (domyślny dla sieci)</string>
+    <string name="dns_server_dialog_title">Niestandardowy serwer DNS</string>
+    <string name="dns_server_hint">IPv4 lub IPv6. Pozostaw puste, aby używać automatycznego DNS.</string>
+    <string name="dns_server_invalid">Wprowadź prawidłowy adres IPv4 lub IPv6</string>
+</resources>
