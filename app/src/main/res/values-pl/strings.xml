@@ -42,7 +42,7 @@
     <string name="home">Główna</string>
 
     <!-- Uninstall protection -->
-        <string name="device_admin_label">Ochrona przed odinstalowaniem Acutis Firewall</string>
+    <string name="device_admin_label">Ochrona przed odinstalowaniem Acutis Firewall</string>
     <string name="device_admin_description">Blokuje odinstalowanie aplikacji Acutis Firewall, gdy jest ona aktywna. Wyłączenie jej w Ustawieniach powoduje wygenerowanie alertu w Acutis Firewall. Aplikacja Acutis Firewall nie korzysta z żadnych innych funkcji administracji urządzeniem.</string>
     <string name="uninstall_protection">Ochrona przed odinstalowaniem</string>
     <string name="uninstall_protection_summary">Blokuj odinstalowanie tej aplikacji</string>
