@@ -16,7 +16,20 @@
   </a>
 </p>
 
-A parental control Android app that blocks adult and dangerous content using a local VPN-based DNS filter. Parents can protect settings with a PIN, manage custom blocklists, and set time-based access rules.
+Acutis Firewall is a free, open-source parental control app for Android. It blocks adult content, malware and gambling on the device itself with a local DNS firewall, sets daily time limits, and keeps a child from removing it — no account, no subscription, no ads and no analytics (MIT licence).
+
+**Download:** [Google Play](https://play.google.com/store/apps/details?id=com.acutis.firewall) · [F-Droid](https://f-droid.org/packages/com.acutis.firewall/) · [APK release](https://github.com/phasnox/acutis_firewall_android/releases/latest) · [acutis.castillo.sh](https://acutis.castillo.sh)
+
+## Guides
+
+Every guide is on the site, [acutis.castillo.sh/help](https://acutis.castillo.sh/help). In Spanish: [acutis.castillo.sh/es/ayuda](https://acutis.castillo.sh/es/ayuda).
+
+- [How to block adult content on Android](https://acutis.castillo.sh/block-adult-content-android.html) — three methods, what each one misses, five-minute setup.
+- [How to block YouTube on Android](https://acutis.castillo.sh/block-youtube-android.html) — the app and youtube.com, or only at set times.
+- [DNS filtering for parental control on Android](https://acutis.castillo.sh/dns-filtering-android.html) — why it covers every app, and how it differs from a filtering resolver.
+- [A free Google Family Link alternative for Android](https://acutis.castillo.sh/family-link-alternative.html) — what Family Link does well and where an on-device filter fits.
+- [Uninstall protection](https://acutis.castillo.sh/uninstall-protection.html) — what Android really allows, and what a determined child can still do.
+- [Forgot your PIN?](https://acutis.castillo.sh/forgot-pin.html) — how to get back in on each setup.
 
 ## Features
 
