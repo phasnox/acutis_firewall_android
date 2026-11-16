@@ -19,11 +19,12 @@ credentials are provided.
 Play accepts only the AAB, never an APK. Never reuse a version code: build `10014`
 for the next upload even if only the listing text changes.
 
-Live tracks (checked 16 Nov 2026): production had been serving `10009 (1.0.9)`.
+Live tracks (16 Nov 2026): production had been serving `10009 (1.0.9)`.
 `10011 (1.0.11)` went to internal testing and was superseded by `10012`, which fixes
-two defects found on a clean install (section 7). `v1.0.12` was tagged, CI published
-it, and production ran `10012 (1.0.12)` as a 20% staged rollout. `10013` fixes the two
-production crash clusters Android vitals reported on `10009` (section 8).
+two defects found on a clean install (section 7). `10013` fixes the two production
+crash clusters Android vitals reported on `10009` plus the boot-restore state bugs
+(section 8); CI published it and production now runs `10013 (1.0.13)` at 100%,
+replacing the 20% `10012` rollout.
 
 ## 2. Release automation
 
