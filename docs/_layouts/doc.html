@@ -1,10 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ page.lang | default: 'en' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page.title }} - {{ site.title }}</title>
     <meta name="description" content="{{ page.description | default: site.description }}">
+    {% if page.ref %}
+    {% assign alts = site.pages | where: "ref", page.ref %}
+    {% assign alt_en = alts | where: "lang", "en" | first %}
+    {% assign alt_es = alts | where: "lang", "es" | first %}
+    {% endif %}
+    <link rel="canonical" href="{{ page.url | absolute_url }}">
+    {% if alt_en %}<link rel="alternate" hreflang="en" href="{{ alt_en.url | absolute_url }}">{% endif %}
+    {% if alt_es %}<link rel="alternate" hreflang="es" href="{{ alt_es.url | absolute_url }}">{% endif %}
+    {% if alt_en %}<link rel="alternate" hreflang="x-default" href="{{ alt_en.url | absolute_url }}">{% endif %}
+    <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
+    <meta property="og:site_name" content="{{ site.title }}">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ page.title }}">
+    <meta property="og:description" content="{{ page.description | default: site.description }}">
+    <meta property="og:url" content="{{ page.url | absolute_url }}">
+    <meta property="og:image" content="{{ '/images/og.png' | absolute_url }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ page.title }}">
+    <meta name="twitter:description" content="{{ page.description | default: site.description }}">
+    <meta name="twitter:image" content="{{ '/images/og.png' | absolute_url }}">
     <link rel="icon" type="image/png" href="{{ '/images/icon.png' | relative_url }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -161,16 +181,24 @@
             .logo span { display: none; }
         }
     </style>
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Article","headline":"{{ page.title }}","description":"{{ page.description | default: site.description }}","mainEntityOfPage":"{{ page.url | absolute_url }}","datePublished":"{{ page.date | date_to_xmlschema }}","dateModified":"{{ page.date | date_to_xmlschema }}","author":{"@type":"Organization","name":"Acutis Firewall","url":"{{ '/' | absolute_url }}"},"publisher":{"@type":"Organization","name":"Acutis Firewall","logo":{"@type":"ImageObject","url":"{{ '/images/icon.png' | absolute_url }}"}}}
+    </script>
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"{% if page.lang == 'es' %}Inicio{% else %}Home{% endif %}","item":"{% if page.lang == 'es' %}{{ '/es/' | absolute_url }}{% else %}{{ '/' | absolute_url }}{% endif %}"},{"@type":"ListItem","position":2,"name":"{{ page.title }}","item":"{{ page.url | absolute_url }}"}]}
+    </script>
 </head>
 <body>
     <header>
         <nav class="container">
-            <a href="{{ '/' | relative_url }}" class="logo">
+            <a href="{% if page.lang == 'es' %}{{ '/es/' | relative_url }}{% else %}{{ '/' | relative_url }}{% endif %}" class="logo">
                 <img src="{{ '/images/icon.png' | relative_url }}" alt="">
                 <span>Acutis Firewall</span>
             </a>
             <div class="nav-links">
-                <a href="{{ '/help.html' | relative_url }}">Help</a>
+                <a href="{% if page.lang == 'es' %}{{ '/es/ayuda.html' | relative_url }}{% else %}{{ '/help.html' | relative_url }}{% endif %}">{% if page.lang == 'es' %}Ayuda{% else %}Help{% endif %}</a>
+                {% if page.lang != 'es' and alt_es %}<a href="{{ alt_es.url | relative_url }}">Español</a>{% endif %}
+                {% if page.lang == 'es' and alt_en %}<a href="{{ alt_en.url | relative_url }}">English</a>{% endif %}
                 <a href="{{ '/privacy-policy.html' | relative_url }}" class="nav-privacy">Privacy</a>
                 <a href="https://github.com/phasnox/acutis_firewall_android/releases/latest" class="nav-cta">Download</a>
             </div>
@@ -183,9 +211,9 @@
 
     <footer>
         <div class="container footer-row">
-            <span>Free, open-source parental control for Android.</span>
+            <span>{% if page.lang == 'es' %}Control parental gratis y de código abierto para Android.{% else %}Free, open-source parental control for Android.{% endif %}</span>
             <nav>
-                <a href="{{ '/help.html' | relative_url }}">Help</a>
+                <a href="{% if page.lang == 'es' %}{{ '/es/ayuda.html' | relative_url }}{% else %}{{ '/help.html' | relative_url }}{% endif %}">{% if page.lang == 'es' %}Ayuda{% else %}Help{% endif %}</a>
                 <a href="{{ '/privacy-policy.html' | relative_url }}">Privacy Policy</a>
                 <a href="{{ '/donate.html' | relative_url }}">Donate</a>
                 <a href="https://github.com/phasnox/acutis_firewall_android">GitHub</a>

@@ -1,3 +1,12 @@
+---
+layout: doc
+title: "Forgot Your Parental Control PIN? How to Reset It"
+description: "The PIN cannot be recovered. How to remove it on each setup — PIN only, PIN with uninstall protection, or Device Owner — without losing the phone."
+lang: en
+ref: forgot-pin
+date: 2026-11-16
+---
+
 # Forgot your PIN?
 
 The PIN cannot be recovered. It never leaves the phone, and the app keeps only a

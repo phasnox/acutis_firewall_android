@@ -1,8 +1,16 @@
-# GitHub Pages builds this folder with Jekyll. index.html and privacy-policy.html have no
-# front matter, so they are copied unchanged; the Markdown guides get the doc layout and
-# take their page title from their first heading.
+# GitHub Pages builds this folder with Jekyll. index.html and privacy-policy.html carry
+# `layout: null` front matter so they stay standalone; the Markdown guides get the doc
+# layout and take their page title from their first heading.
 title: Acutis Firewall
-description: Free, open-source parental control for Android.
+description: Free, open-source parental control for Android. On-device DNS firewall that blocks adult content, malware and gambling.
+lang: en
+# GitHub Pages enables the three optional-front-matter/relative-links/titles plugins by
+# default; listing them here makes local builds match Pages. All are on the Pages whitelist.
+plugins:
+  - jekyll-sitemap
+  - jekyll-optional-front-matter
+  - jekyll-relative-links
+  - jekyll-titles-from-headings
 # Stated rather than looked up from the GitHub API, and pinned to https.
 url: https://acutis.castillo.sh
 baseurl: ""
@@ -11,6 +19,7 @@ defaults:
       path: ""
     values:
       layout: doc
+      lang: en
 # Publish only the rendered guides, not their Markdown sources next to them.
 optional_front_matter:
   remove_originals: true

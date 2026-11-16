@@ -1,0 +1,400 @@
+---
+layout: null
+lang: es
+ref: home
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control parental gratis para Android – Acutis Firewall</title>
+    <meta name="description" content="Control parental gratis y de código abierto para Android. Bloquea contenido adulto, malware y apuestas en el móvil, con límites de tiempo y PIN.">
+    <link rel="canonical" href="https://acutis.castillo.sh/es/">
+    <link rel="alternate" hreflang="es" href="https://acutis.castillo.sh/es/">
+    <link rel="alternate" hreflang="en" href="https://acutis.castillo.sh/">
+    <link rel="alternate" hreflang="x-default" href="https://acutis.castillo.sh/">
+    <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
+    <meta property="og:site_name" content="Acutis Firewall">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_ES">
+    <meta property="og:title" content="Control parental gratis para Android – Acutis Firewall">
+    <meta property="og:description" content="Control parental gratis y de código abierto para Android. Bloquea contenido adulto, malware y apuestas en el móvil, con límites de tiempo y PIN.">
+    <meta property="og:url" content="https://acutis.castillo.sh/es/">
+    <meta property="og:image" content="https://acutis.castillo.sh/images/og.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Control parental gratis para Android – Acutis Firewall">
+    <meta name="twitter:description" content="Control parental gratis y de código abierto para Android. Bloquea contenido adulto, malware y apuestas en el móvil, con límites de tiempo y PIN.">
+    <meta name="twitter:image" content="https://acutis.castillo.sh/images/og.png">
+    <link rel="icon" type="image/png" href="../images/icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Acutis Firewall","operatingSystem":"Android 10+","applicationCategory":"SecurityApplication","isAccessibleForFree":true,"license":"https://opensource.org/licenses/MIT","downloadUrl":"https://play.google.com/store/apps/details?id=com.acutis.firewall","screenshot":["https://acutis.castillo.sh/images/main.jpg","https://acutis.castillo.sh/images/blocked_screen.jpg"],"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"sameAs":["https://github.com/phasnox/acutis_firewall_android","https://f-droid.org/packages/com.acutis.firewall/"]}
+    </script>
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Acutis Firewall es realmente gratis?","acceptedAnswer":{"@type":"Answer","text":"Sí. Es código abierto con licencia MIT, sin anuncios, sin suscripción, sin compras dentro de la app y sin cuenta. Las donaciones son opcionales y pagan dispositivos de prueba y el alojamiento de las listas."}},{"@type":"Question","name":"¿Necesita root?","acceptedAnswer":{"@type":"Answer","text":"No. Usa la API VpnService de Android para filtrar el DNS en el propio móvil, en Android 10 o superior. Sin root, sin ROM personalizada y sin ordenador."}},{"@type":"Question","name":"¿Mi hijo puede desinstalarlo?","acceptedAnswer":{"@type":"Answer","text":"La protección contra desinstalación opcional registra la app como administrador del dispositivo: bloquea desinstalar, forzar la detención y borrar los datos, y desactivarla pide el PIN. Android sigue permitiendo desactivar un administrador desde Ajustes, y la app te avisa cuando ocurre. El modo Device Owner es la única opción realmente imposible de quitar."}},{"@type":"Question","name":"¿Va a ralentizar el móvil?","acceptedAnswer":{"@type":"Answer","text":"No. Solo el tráfico DNS hacia 8.8.8.8 y 8.8.4.4 pasa por el túnel local; el resto de conexiones lo esquiva por completo. No hay proxy ni servidor remoto en medio."}},{"@type":"Question","name":"¿Recopila datos?","acceptedAnswer":{"@type":"Answer","text":"No. No hay analítica ni servidor del desarrollador. Las consultas DNS se responden en el dispositivo y las listas se descargan de listas públicas de GitHub y GitLab. Nada de la navegación de tus hijos sale del móvil."}}]}
+    </script>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="/es/" class="logo">
+                <img src="../images/icon.png" width="512" height="512" alt="Acutis Firewall">
+                <span>Acutis Firewall</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Funciones</a>
+                <a href="ayuda.html">Guías</a>
+                <a href="/">English</a>
+                <a href="../privacy-policy.html">Privacidad</a>
+                <a href="https://github.com/phasnox/acutis_firewall_android/releases/latest" class="nav-cta">Descargar</a>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <div class="hero-badge">Gratis y de código abierto</div>
+                    <h1>Control parental gratis <span class="highlight">para Android</span></h1>
+                    <p class="hero-subtitle">Bloquea contenido adulto, malware y apuestas en todas las apps — no solo en el navegador —, pon límites de tiempo diarios y protege los ajustes con un PIN. Todo el filtrado ocurre en tu teléfono: sin cuenta, sin anuncios y sin rastreo.</p>
+                    <div class="hero-actions">
+                        <a href="https://play.google.com/store/apps/details?id=com.acutis.firewall" class="btn btn-primary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3.6 1.8 13.7 12 3.6 22.2c-.4-.3-.6-.8-.6-1.4V3.2c0-.6.2-1.1.6-1.4Zm11.5 8.8L5.9 1.4l10.9 6.3-1.7 2.9Zm1.7 2.8 1.7 2.9-10.9 6.3 9.2-9.2Zm3.1-1.5c.6.4.6 1.4 0 1.8l-2.3 1.3-1.9-2.4 1.9-2.4 2.3 1.7Z"/></svg>
+                            Descargar en Google Play
+                        </a>
+                        <a href="https://github.com/phasnox/acutis_firewall_android/releases/latest" class="btn btn-secondary" id="download-btn">Descargar APK</a>
+                    </div>
+                    <div class="hero-meta">
+                        <div class="hero-meta-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Sin suscripción
+                        </div>
+                        <div class="hero-meta-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Sin rastreo
+                        </div>
+                        <div class="hero-meta-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Código abierto
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="phone-frame">
+                        <img src="../images/main.jpg" width="686" height="1526" alt="Pantalla principal de Acutis Firewall con el cortafuegos activado y 137.411 sitios bloqueados">
+                    </div>
+                    <div class="floating-card floating-card-1">
+                        <div class="icon">🛡️</div>
+                        <span>Sitio bloqueado</span>
+                    </div>
+                    <div class="floating-card floating-card-2">
+                        <div class="icon">⏰</div>
+                        <span>Modo noche activo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="trust-strip">
+        <div class="container">
+            <div class="trust-grid">
+                <div class="trust-item">
+                    <div class="number">100%</div>
+                    <div class="label">Filtrado en el dispositivo</div>
+                </div>
+                <div class="trust-item">
+                    <div class="number">0</div>
+                    <div class="label">Rastreadores o analítica</div>
+                </div>
+                <div class="trust-item">
+                    <div class="number">Todas</div>
+                    <div class="label">Las apps, no solo el navegador</div>
+                </div>
+                <div class="trust-item">
+                    <div class="number">Gratis</div>
+                    <div class="label">Para siempre, sin anuncios</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-eyebrow">Funciones</span>
+                <h2>Todo lo que necesitas para proteger a tu familia</h2>
+                <p>Protección potente y privada que funciona en segundo plano. Se configura una vez y hace el trabajo.</p>
+            </div>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Bloquear contenido adulto</h3>
+                    <p>Bloquea contenido adulto, malware, sitios de phishing, apuestas y redes sociales. Funciona en todas las apps, no solo en el navegador.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⏰</div>
+                    <h3>Límites de tiempo</h3>
+                    <p>Pon límites diarios de uso y programa bloqueos en las horas de deberes, de dormir o de estar en familia.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Protección con PIN</h3>
+                    <p>Protege los ajustes con un PIN para que los niños no puedan desactivar la protección ni cambiar la configuración.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3>Privacidad desde el diseño</h3>
+                    <p>Todo el filtrado ocurre en el teléfono. Sin recogida de datos, sin servidores externos y sin rastreo.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Funciona en todas las apps</h3>
+                    <p>El filtrado cubre todas las apps del teléfono, no solo el navegador. Se activa con un toque y arranca solo al encender.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Gratis y de código abierto</h3>
+                    <p>Sin suscripción, sin anuncios y sin compras dentro de la app. Protección completa sin coste.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section screenshots" id="screenshots">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-eyebrow">Por dentro</span>
+                <h2>Pensada para padres, no para empresas</h2>
+                <p>Una interfaz clara y directa, centrada en lo importante: que los niños estén seguros en internet.</p>
+            </div>
+            <div class="screenshot-grid">
+                <div class="screenshot"><img src="../images/main.jpg" width="686" height="1526" loading="lazy" alt="Pantalla principal con el cortafuegos activado y 137.411 sitios bloqueados"></div>
+                <div class="screenshot"><img src="../images/blocked_screen.jpg" width="692" height="1516" loading="lazy" alt="Ajustes de listas con contenido adulto y malware activados; apuestas y redes sociales opcionales"></div>
+                <div class="screenshot"><img src="../images/time_rules.jpg" width="676" height="1512" loading="lazy" alt="Diálogo Añadir regla con horario y límite diario, controles de hora y botones de días de la semana"></div>
+                <div class="screenshot"><img src="../images/settings.jpg" width="680" height="1074" loading="lazy" alt="Pantalla de ajustes con descarga de listas, protección con PIN y arranque automático"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section guides" id="guides">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-eyebrow">Guías</span>
+                <h2>Configúralo en minutos</h2>
+                <p>Guías paso a paso para las dudas que de verdad tienen los padres.</p>
+            </div>
+            <div class="guides-grid">
+                <a class="guide-card" href="bloquear-contenido-adulto-android.html">
+                    <h3>Cómo bloquear contenido adulto en Android</h3>
+                    <p>Tres formas de filtrar el teléfono de un niño, qué se le escapa a cada una y cómo montar un filtro gratis en cinco minutos.</p>
+                </a>
+                <a class="guide-card" href="bloquear-youtube-android.html">
+                    <h3>Cómo bloquear YouTube en Android</h3>
+                    <p>Bloquea la app y youtube.com, o permítelos solo a ciertas horas. Sin root y sin cuenta de Google.</p>
+                </a>
+                <a class="guide-card" href="filtro-dns-android.html">
+                    <h3>Filtro DNS en Android para control parental</h3>
+                    <p>Por qué el filtrado DNS cubre todas las apps, en qué se diferencia un filtro local de la DNS privada y cuál conviene usar.</p>
+                </a>
+                <a class="guide-card" href="alternativa-family-link.html">
+                    <h3>Alternativa a Family Link para Android (gratis)</h3>
+                    <p>Qué hace bien Family Link, dónde no encaja y qué hace en su lugar un filtro en el propio móvil.</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="section privacy-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-eyebrow">Privacidad desde el diseño</span>
+                <h2>Tus datos no salen del teléfono</h2>
+                <p>A diferencia de otras apps de control parental, Acutis Firewall nunca envía tus datos a ningún sitio. Todo se queda en el dispositivo.</p>
+            </div>
+            <div class="privacy-points">
+                <div class="privacy-point">
+                    <div class="icon">🚫</div>
+                    <div class="label">Sin recogida de datos</div>
+                </div>
+                <div class="privacy-point">
+                    <div class="icon">🏠</div>
+                    <div class="label">Filtrado solo local</div>
+                </div>
+                <div class="privacy-point">
+                    <div class="icon">📊</div>
+                    <div class="label">Sin analítica</div>
+                </div>
+                <div class="privacy-point">
+                    <div class="icon">🔒</div>
+                    <div class="label">PIN cifrado</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section faq" id="faq">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-eyebrow">Preguntas frecuentes</span>
+                <h2>Dudas habituales</h2>
+                <p>Lo que preguntan los padres antes de instalarla en el teléfono de un niño.</p>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <h3>¿Acutis Firewall es realmente gratis?</h3>
+                    <p>Sí. Es código abierto con licencia MIT, sin anuncios, sin suscripción, sin compras dentro de la app y sin cuenta. Las donaciones son opcionales y pagan dispositivos de prueba, el alojamiento de las listas y el trabajo de mantener la app funcionando en las nuevas versiones de Android.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Necesita root?</h3>
+                    <p>No. Usa la API <code>VpnService</code> de Android para filtrar el DNS en el propio móvil, en Android 10 o superior. Sin root, sin ROM personalizada y sin ordenador.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Mi hijo puede desinstalarlo?</h3>
+                    <p>La protección contra desinstalación opcional registra la app como administrador del dispositivo: bloquea desinstalar, forzar la detención y borrar los datos, y desactivarla pide el PIN. Android sigue permitiendo desactivar un administrador desde Ajustes, y la app te avisa cuando ocurre. El modo Device Owner es la única opción realmente imposible de quitar. Lo explicamos en <a href="proteccion-desinstalacion.html">protección contra desinstalación</a>.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Va a ralentizar el móvil?</h3>
+                    <p>No. Solo el tráfico DNS hacia <code>8.8.8.8</code> y <code>8.8.4.4</code> pasa por el túnel local; el resto de conexiones lo esquiva por completo. No hay proxy ni servidor remoto en medio.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Recopila datos?</h3>
+                    <p>No. No hay analítica ni servidor del desarrollador. Las consultas DNS se responden en el dispositivo y las listas se descargan de listas públicas de GitHub y GitLab. Nada de la navegación de tus hijos sale del móvil. La <a href="../privacy-policy.html">política de privacidad</a> está en inglés.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section donate-section" id="donate">
+        <div class="container">
+            <div class="donate-card">
+                <div class="donate-copy">
+                    <span class="section-eyebrow">Apoya el proyecto</span>
+                    <h2>Gratis para todas las familias, financiada con donaciones</h2>
+                    <p>Acutis Firewall no tiene anuncios, ni cuentas, ni versión de pago. Las donaciones pagan dispositivos de prueba, el alojamiento de las listas y el tiempo de mantener la app funcionando en las nuevas versiones de Android.</p>
+                    <ol class="donate-steps">
+                        <li>Escanea el código QR con una cartera de Bitcoin, o pulsa <strong>Abrir en la cartera</strong>.</li>
+                        <li>Si lo prefieres, copia la dirección y pégala en cualquier cartera que acepte direcciones <code>bc1q…</code>.</li>
+                        <li>Envía el importe que quieras y comprueba que llegó en <a href="https://mempool.space/address/bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce" target="_blank" rel="noopener">mempool.space</a>.</li>
+                    </ol>
+                    <p class="donate-fine">Solo Bitcoin mainnet. <a href="../donate.html">Instrucciones completas (en inglés)</a>.</p>
+                </div>
+                <div class="donate-panel">
+                    <img src="../images/bitcoin-donate-qr.png" width="220" height="220" alt="Código QR de la dirección de Bitcoin para donar a Acutis Firewall">
+                    <code id="btc-address">bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce</code>
+                    <div class="donate-actions">
+                        <a class="btn btn-primary" href="bitcoin:bc1q408lpl7etcfwdvuxh84wvcwc6gvzwdktu2quce">Abrir en la cartera</a>
+                        <button class="btn btn-secondary" id="copy-btc" type="button">Copiar dirección</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-card">
+                <h2>¿Listo para proteger a tu familia?</h2>
+                <p>Instala Acutis Firewall en menos de un minuto. Sin cuenta, sin tarjeta y sin trampa.</p>
+                <a href="https://github.com/phasnox/acutis_firewall_android/releases/latest" class="btn" id="download-btn-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Descargar para Android
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="/es/" class="logo">
+                        <img src="../images/icon.png" width="512" height="512" alt="Acutis Firewall">
+                        <span>Acutis Firewall</span>
+                    </a>
+                    <p>Control parental gratis y de código abierto para Android. El nombre viene del <a href="https://es.wikipedia.org/wiki/Carlos_Acutis" target="_blank" style="color: rgba(255,255,255,0.9);">beato Carlos Acutis</a>, patrón de internet.</p>
+                </div>
+                <div class="footer-links-group">
+                    <div class="footer-col">
+                        <h4>Producto</h4>
+                        <a href="#features">Funciones</a>
+                        <a href="#screenshots">Capturas</a>
+                        <a href="https://github.com/phasnox/acutis_firewall_android/releases/latest">Descargar</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Recursos</h4>
+                        <a href="ayuda.html">Ayuda y guías</a>
+                        <a href="bloquear-contenido-adulto-android.html">Bloquear contenido adulto</a>
+                        <a href="bloquear-youtube-android.html">Bloquear YouTube</a>
+                        <a href="filtro-dns-android.html">Filtro DNS</a>
+                        <a href="alternativa-family-link.html">Alternativa a Family Link</a>
+                        <a href="proteccion-desinstalacion.html">Protección contra desinstalación</a>
+                        <a href="olvide-el-pin.html">¿Olvidaste el PIN?</a>
+                        <a href="/">English</a>
+                        <a href="../privacy-policy.html">Política de privacidad (inglés)</a>
+                        <a href="../donate.html">Donar con Bitcoin</a>
+                        <a href="https://github.com/phasnox/acutis_firewall_android">GitHub</a>
+                        <a href="mailto:acutis@castillo.sh">Contacto</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>&copy; 2026 Acutis Firewall. Todos los derechos reservados.</span>
+                <span><a href="https://github.com/phasnox/acutis_firewall_android">Código abierto en GitHub</a></span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        fetch('https://api.github.com/repos/phasnox/acutis_firewall_android/releases/latest')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const apk = data.assets.find(a => a.name.endsWith('.apk'));
+                if (!apk) return;
+                const buttons = ['download-btn', 'download-btn-2'];
+                buttons.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.href = apk.browser_download_url;
+                });
+            })
+            .catch(() => {});
+
+        // Copy the donation address; clipboard API needs a secure context, so fall
+        // back to a hidden textarea for plain-http previews.
+        const copyButton = document.getElementById('copy-btc');
+        const addressEl = document.getElementById('btc-address');
+        if (copyButton && addressEl) {
+            const address = addressEl.textContent.trim();
+            copyButton.addEventListener('click', () => {
+                const done = (label) => {
+                    copyButton.textContent = label;
+                    setTimeout(() => { copyButton.textContent = 'Copiar dirección'; }, 2000);
+                };
+                const fallback = () => {
+                    const area = document.createElement('textarea');
+                    area.value = address;
+                    area.setAttribute('readonly', '');
+                    area.style.position = 'fixed';
+                    area.style.opacity = '0';
+                    document.body.appendChild(area);
+                    area.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(area);
+                    done(ok ? '¡Copiada!' : 'No se pudo copiar');
+                };
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(address).then(() => done('¡Copiada!'), fallback);
+                } else {
+                    fallback();
+                }
+            });
+        }
+    </script>
+</body>
+</html>

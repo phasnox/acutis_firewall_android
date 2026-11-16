@@ -1,3 +1,12 @@
+---
+layout: doc
+title: Donate
+description: "How to support Acutis Firewall with Bitcoin, and how to check that a donation arrived."
+lang: en
+ref: donate
+date: 2026-11-16
+---
+
 # Donate
 
 Acutis Firewall is free, has no ads, no account and no analytics. It is built and

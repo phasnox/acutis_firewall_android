@@ -1,4 +1,18 @@
+---
+layout: doc
+title: "Uninstall Protection: Stop a Child Removing the App"
+description: "What Android really allows: how uninstall protection blocks uninstall, force stop and clear storage, what a determined child can still do, and how to turn it off."
+lang: en
+ref: uninstall-protection
+date: 2026-11-16
+---
+
 # Uninstall protection
+
+It is a reasonable thing to want from a parental control app that cannot be uninstalled —
+or almost. Android gives no app the power to make itself truly impossible to remove, so
+this page is precise about which routes are blocked, which ones a determined child can
+still take, and what the app tells you when that happens.
 
 Stops a child uninstalling Acutis Firewall, or force-stopping it or clearing its
 storage from Settings.
