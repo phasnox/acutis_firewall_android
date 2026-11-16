@@ -1,0 +1,36 @@
+Acutis es una app de control parental gratis para Android. Bloquea contenido adulto, malware, apuestas y redes sociales en el propio dispositivo, establece límites de tiempo diarios e impide que un niño la desinstale. Sin cuenta, sin suscripción, sin anuncios y sin rastreo — y es código abierto (MIT).
+
+<b>Funciones principales</b>
+
+<b>Protección de contenido</b>
+• Bloquea páginas para adultos con una lista de dominios completa
+• Protege frente a malware y phishing con filtrado DNS
+• Bloqueo opcional de sitios de apuestas y redes sociales
+• Funciona en TODAS las apps, no solo en el navegador
+
+<b>Control de tiempo</b>
+• Límites diarios para sitios o categorías concretas
+• Programa bloqueos en las horas de deberes, de dormir o de estar en familia
+• Elige qué días de la semana se aplica cada regla
+
+<b>Control parental</b>
+• Protege los ajustes con un PIN para que los niños no puedan desactivar la protección
+• Activación con un toque, sin configuración
+• Arranca solo al encender el dispositivo
+
+<b>Privacidad</b>
+• Todo el filtrado ocurre en el dispositivo: no se envía nada a servidores externos
+• Sin analítica, sin rastreo y sin recogida de datos
+• Las consultas DNS van al resolutor de tu red o al que elijas
+• El PIN se guarda con el almacenamiento cifrado de Android
+
+<b>Cómo funciona</b>
+
+Acutis Firewall crea un túnel VPN local en el dispositivo para interceptar las consultas DNS. Cuando se pide un dominio bloqueado, responde "no encontrado" y el contenido no carga. El resto del tráfico pasa con normalidad y sin ralentizar el teléfono.
+
+<b>Requisitos</b>
+• Android 10 o superior, sin root
+• Sin cuenta y sin suscripción
+• Código abierto con licencia MIT: github.com/phasnox/acutis_firewall_android
+
+El nombre viene del beato Carlos Acutis, patrón de internet.
