@@ -1,0 +1,3 @@
+• Fix: DNS resolution no longer fails on networks that list an unreachable resolver first
+• Fix: DNS filtering now stays active after the VPN connects
+• Fix: the VPN no longer busy-spins on an idle tunnel, which wasted battery

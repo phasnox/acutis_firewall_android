@@ -67,21 +67,19 @@ class FirewallVpnService : VpnService() {
         private const val MTU = 1500
         private const val DNS_PORT = 53
 
+        /** Per-candidate wait; a dead server must not consume the client's DNS budget. */
+        private const val UPSTREAM_TIMEOUT_MS = 1500
+
         // Use Google DNS as our "fake" DNS that we intercept
         private const val INTERCEPT_DNS = "8.8.8.8"
         // Fallback DNS if system DNS is not available
         private val FALLBACK_DNS = InetAddress.getByName("1.1.1.1")
     }
 
-    // Upstream DNS server (custom override, else the cached automatic server)
-    private var upstreamDns: InetAddress = FALLBACK_DNS
-
-    /**
-     * The automatic upstream, captured before the VPN changes the active network.
-     * Never re-read live: once the VPN is up it may be the active network, and asking
-     * it would return [INTERCEPT_DNS] and forward queries back into ourselves.
-     */
-    private var systemDns: InetAddress = FALLBACK_DNS
+    // Upstream DNS servers, best first. The first entry is what the next query tries;
+    // forwardToUpstream() promotes whichever address answers and skips the rest.
+    @Volatile
+    private var upstreamOrder: List<InetAddress> = listOf(FALLBACK_DNS)
 
     // Serializes selection so a stale startup snapshot cannot overwrite a refresh.
     private val dnsMutex = Mutex()
@@ -178,12 +176,15 @@ class FirewallVpnService : VpnService() {
         serviceScope.launch {
             try {
                 // Get system DNS before starting VPN (VPN will change network properties)
-                val automaticDns = getSystemDnsServers().firstOrNull() ?: FALLBACK_DNS
+                val systemDnsServers = getSystemDnsServers()
 
                 dnsMutex.withLock {
-                    systemDns = automaticDns
-                    upstreamDns = getConfiguredDnsServer() ?: systemDns
-                    Log.d(TAG, "Using upstream DNS: $upstreamDns")
+                    upstreamOrder = UpstreamDns.candidates(
+                        systemServers = systemDnsServers,
+                        override = getConfiguredDnsServer(),
+                        fallback = FALLBACK_DNS,
+                    )
+                    Log.d(TAG, "Upstream DNS candidates: $upstreamOrder")
                 }
 
                 blockedDomains = loadBlockedDomains()
@@ -441,13 +442,33 @@ class FirewallVpnService : VpnService() {
     }
 
     private fun forwardToUpstream(query: ByteArray): ByteArray? {
+        // A device DNS list usually holds one working server and one that never
+        // answers (unroutable IPv6, stale DHCP entry). Trying only the first one —
+        // as this did before — meant every query timed out and nothing resolved.
+        // Walk the candidates and remember the one that answered.
+        val candidates = upstreamOrder
+        for (candidate in candidates) {
+            val response = queryUpstream(query, candidate) ?: continue
+            if (candidates.first() != candidate) {
+                upstreamOrder = UpstreamDns.promote(candidates, candidate)
+                Log.d(TAG, "Upstream DNS now: $upstreamOrder")
+            }
+            return response
+        }
+        Log.e(TAG, "No upstream DNS answered, tried $candidates")
+        return null
+    }
+
+    private fun queryUpstream(query: ByteArray, upstream: InetAddress): ByteArray? {
         var socket: DatagramSocket? = null
         return try {
             socket = DatagramSocket()
             protect(socket) // CRITICAL: Prevent routing loop
-            socket.soTimeout = 5000
+            // Short enough that a dead candidate costs a fraction of a browser's
+            // DNS timeout, so the next candidate still answers in time.
+            socket.soTimeout = UPSTREAM_TIMEOUT_MS
 
-            val packet = DatagramPacket(query, query.size, upstreamDns, DNS_PORT)
+            val packet = DatagramPacket(query, query.size, upstream, DNS_PORT)
             socket.send(packet)
 
             val responseBuffer = ByteArray(1024)
@@ -456,7 +477,7 @@ class FirewallVpnService : VpnService() {
 
             responseBuffer.copyOf(responsePacket.length)
         } catch (e: Exception) {
-            Log.e(TAG, "Error forwarding DNS", e)
+            Log.w(TAG, "Upstream $upstream did not answer: ${e.message}")
             null
         } finally {
             socket?.close()
@@ -651,12 +672,20 @@ class FirewallVpnService : VpnService() {
      * Switches the upstream without touching interception. Deliberately not gated on
      * [isRunning]: a save racing VPN establishment must still update the field, and a
      * refresh while stopped is harmless because the next start rereads the preference.
+     *
+     * The automatic candidates are re-read here too, so a settings save on a network
+     * whose resolvers changed does not keep forwarding to the old list.
      */
     private fun refreshDns() {
         serviceScope.launch {
+            val systemDnsServers = getSystemDnsServers()
             dnsMutex.withLock {
-                upstreamDns = getConfiguredDnsServer() ?: systemDns
-                Log.d(TAG, "Using upstream DNS: $upstreamDns")
+                upstreamOrder = UpstreamDns.candidates(
+                    systemServers = systemDnsServers,
+                    override = getConfiguredDnsServer(),
+                    fallback = FALLBACK_DNS,
+                )
+                Log.d(TAG, "Upstream DNS candidates: $upstreamOrder")
             }
         }
     }

@@ -172,3 +172,43 @@ jobs:
             aab/acutis-firewall-*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  play:
+    name: Publish to Google Play
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      PLAY_CONFIG_JSON: ${{ secrets.PLAY_CONFIG_JSON }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          BASE_VERSION=$(echo $VERSION | sed 's/-.*//')
+          MAJOR=$(echo $BASE_VERSION | cut -d. -f1)
+          MINOR=$(echo $BASE_VERSION | cut -d. -f2)
+          PATCH=$(echo $BASE_VERSION | cut -d. -f3)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))" >> $GITHUB_OUTPUT
+
+      - name: Download App Bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-aab
+          path: aab
+
+      - name: Upload to internal testing
+        if: ${{ env.PLAY_CONFIG_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_CONFIG_JSON }}
+          packageName: com.acutis.firewall
+          releaseFiles: aab/acutis-firewall-*.aab
+          track: internal
+          status: completed
+          releaseName: ${{ steps.version.outputs.VERSION_CODE }} (${{ steps.version.outputs.VERSION }})
+          whatsNewDirectory: fastlane/metadata/android/en-US/changelogs

@@ -10,16 +10,43 @@ credentials are provided.
 | Item | Value |
 |------|-------|
 | Package | `com.acutis.firewall` |
-| Version name | `1.0.11` |
-| Version code | `10011` |
+| Version name | `1.0.12` |
+| Version code | `10012` |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 (Android 16) — required for new apps since 31 Aug 2026 |
-| Artifact | `app/build/outputs/bundle/release/app-release.aab`; CI publishes the signed `v1.0.11` assets on the GitHub release. Copy the AAB to `play-store/acutis-firewall-1.0.11-signed.aab` if keeping a local copy. |
+| Artifact | `app/build/outputs/bundle/release/app-release.aab`; CI publishes the signed `v1.0.12` assets on the GitHub release and uploads the AAB to the internal testing track. Copy the AAB to `play-store/acutis-firewall-1.0.12-signed.aab` if keeping a local copy. |
 
-Play accepts only the AAB, never an APK. Never reuse a version code: build `10012`
+Play accepts only the AAB, never an APK. Never reuse a version code: build `10013`
 for the next upload even if only the listing text changes.
 
-## 2. Signing
+Live tracks (checked 16 Nov 2026): production serves `10009 (1.0.9)`; `10011 (1.0.11)`
+went to internal testing on 16 Nov and is superseded by `1.0.12`, which fixes a
+regression found on a clean install — see section 7.
+
+## 2. Release automation
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`:
+
+1. `test` — `./gradlew testDebugUnitTest`.
+2. `build` — rewrites `versionCode`/`versionName` from the tag, signs with the
+   `KEYSTORE_*` secrets, and uploads the APK/AAB as workflow artifacts.
+3. `release` — creates the GitHub release with both files attached.
+4. `play` — uploads the AAB to the **internal testing** track with release notes
+   from `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, using the
+   `PLAY_CONFIG_JSON` secret (a Play Console service account with *Release to
+   testing tracks* on this app). The step is skipped when the secret is absent.
+
+Promotion to production stays manual: use *Promote release* on the internal track
+in the Console, or the Publisher API. Nothing in CI can publish to production.
+
+The service account is `play-publisher@black-seer-492520-s6.iam.gserviceaccount.com`.
+It already had access to the ChampSheep app; the Acutis app was added on 16 Nov 2026
+with *Release apps to testing tracks*, *Manage testing tracks*, *Manage store
+presence* and *Manage policy declarations*. To rotate the key: create a new JSON key
+in the Google Cloud project, `gh secret set PLAY_CONFIG_JSON -R
+phasnox/acutis_firewall_android < key.json`, then delete the old key.
+
+## 3. Signing
 
 Release signing is read from `keystore.properties` in the repository root, or from
 `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD` in the
@@ -168,18 +195,24 @@ prefer a YouTube link.
    with a staged rollout (10% → 50% → 100%).
 4. Watch **Android vitals** and the pre-launch report for crashes and ANRs.
 
-Test on the Play build before promoting:
+Test on the Play build before promoting (run 16 Nov 2026 on a clean Android 15
+emulator, release build signed with a throwaway key):
 
-- [ ] First run: blocklist download, shield tap, VPN consent, notification shown
-- [ ] DNS filtering blocks an adult domain and allows a normal domain
-- [ ] Time rule applies (daily limit and schedule)
-- [ ] PIN gates disabling the firewall and changing settings
+- [x] First run: blocklist download (120,828 sites), shield tap, VPN consent, "Firewall is enabled"
+- [x] DNS filtering blocks a blocklisted domain (`example.org` added to a custom list → NXDOMAIN) and allows a normal domain (`wikipedia.org` resolves) — only after the 1.0.12 fix, see section 7
+- [ ] Time rule applies (daily limit and schedule) — screen loads with a rule present; the Social Media category ships empty, so nothing was actually blocked
+- [x] PIN gates disabling the firewall: tapping the shield raises "PIN Required"
 - [ ] Optional device admin: enable, try uninstall, disable with PIN
-- [ ] Reboot with auto-start on: protection returns
-- [ ] Update the app from Play with protection on: protection returns (fix in 1.0.9)
-- [ ] Custom DNS server setting persists and is used
-- [ ] Notification "Disable Firewall" prompts for the PIN
-- [ ] Dark theme: status-bar icons stay legible
+- [x] Reboot with auto-start on: protection returns, custom DNS still used
+- [x] Update the app with protection on: `MY_PACKAGE_REPLACED` restarts the service and protection returns (verified with an in-place 10012 → 10013 install)
+- [x] Custom DNS server setting persists and is used (`Upstream DNS candidates: [/9.9.9.9]`)
+- [ ] Notification "Disable Firewall" prompts for the PIN — with no PIN set the action stops the service (verified); with a PIN the action reuses the shield's PIN gate, but emulator shade taps could not reach the action button to confirm end to end
+- [x] Dark theme: text and status-bar icons stay legible
+
+Two defects were found this way and are fixed in 1.0.12: filtered DNS resolved
+nothing on networks whose first resolver is unreachable (section 7), and the
+ongoing notification was invisible on Android 13+ because `POST_NOTIFICATIONS` was
+declared but never requested at runtime.
 
 ## 6. Notes and risks
 
@@ -196,3 +229,24 @@ Test on the Play build before promoting:
 - F-Droid builds from source and links `acutis-firewall-%v-signed.apk`; the CI
   workflow still produces that name. Keep `metadata/com.acutis.firewall.yml`
   updated separately when a new tag is built.
+
+## 7. Why 1.0.11 never reached production
+
+Installed on a clean Android 15 emulator, 1.0.11 came up as "Firewall is enabled"
+with the VPN active and then resolved nothing: `ping google.com` returned
+`unknown host google.com` while the same command worked with the firewall off.
+
+The cause was upstream selection. `startVpn()` took the first address of the
+device's DNS list; this emulator advertises `fec0::3` (site-local IPv6 with no
+route) before `10.0.2.3`, so every forwarded query sat in
+`java.net.SocketTimeoutException: Poll timed out` and the app returned no answer.
+Any dual-stack network that lists an unroutable IPv6 resolver first behaved the
+same way — filtering silently became a black hole.
+
+1.0.12 fixes it: `UpstreamDns.candidates()` keeps every usable resolver, orders
+IPv4 before IPv6, drops the intercepted `8.8.8.8`/`8.8.4.4` and loopback, and
+`forwardToUpstream()` tries each candidate with a 1.5 s timeout, promoting the one
+that answers. A unit test covers the ordering rule.
+
+Lesson for the checklist: "Firewall is enabled" in the UI only proves the tunnel
+exists. Always resolve a domain with the firewall on.
