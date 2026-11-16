@@ -19,9 +19,10 @@ credentials are provided.
 Play accepts only the AAB, never an APK. Never reuse a version code: build `10013`
 for the next upload even if only the listing text changes.
 
-Live tracks (checked 16 Nov 2026): production serves `10009 (1.0.9)`; `10011 (1.0.11)`
-went to internal testing on 16 Nov and is superseded by `1.0.12`, which fixes a
-regression found on a clean install — see section 7.
+Live tracks (checked 16 Nov 2026): production had been serving `10009 (1.0.9)`.
+`10011 (1.0.11)` went to internal testing and was superseded by `10012`, which fixes
+two defects found on a clean install (section 7). `v1.0.12` was tagged, CI published
+it, and production runs `10012 (1.0.12)` as a 20% staged rollout.
 
 ## 2. Release automation
 
