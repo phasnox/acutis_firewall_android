@@ -59,6 +59,13 @@ class FirewallVpnService : VpnService() {
          * the firewall on its own.
          */
         const val EXTRA_PIN_VERIFIED = "com.acutis.firewall.EXTRA_PIN_VERIFIED"
+
+        /**
+         * Set by the boot/update receiver. Automatic starts may retry a failed
+         * establish() once because they can race the system's VPN readiness; a
+         * user tap must not silently retry a revoked consent.
+         */
+        const val EXTRA_AUTOMATIC = "com.acutis.firewall.EXTRA_AUTOMATIC"
         private const val NOTIFICATION_ID = 1
         private const val LOCKDOWN_WARNING_NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "firewall_channel"
@@ -69,6 +76,9 @@ class FirewallVpnService : VpnService() {
 
         /** Per-candidate wait; a dead server must not consume the client's DNS budget. */
         private const val UPSTREAM_TIMEOUT_MS = 1500
+
+        /** Wait before the single automatic-start establish() retry. */
+        private const val BOOT_RETRY_DELAY_MS = 5000L
 
         // Use Google DNS as our "fake" DNS that we intercept
         private const val INTERCEPT_DNS = "8.8.8.8"
@@ -83,6 +93,41 @@ class FirewallVpnService : VpnService() {
 
     // Serializes selection so a stale startup snapshot cannot overwrite a refresh.
     private val dnsMutex = Mutex()
+
+    /**
+     * The boot restore can establish the tunnel before the underlying network has
+     * installed its routes: every upstream send then fails with ENETUNREACH and,
+     * because nothing re-reads the resolvers, DNS stays dead until the user toggles
+     * the firewall. Watching the default network and re-running selection when it
+     * becomes available closes that window.
+     */
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: android.net.Network) {
+            if (isRunning) {
+                Log.d(TAG, "Default network available, refreshing upstream DNS")
+                refreshDns()
+            }
+        }
+
+        override fun onLinkPropertiesChanged(
+            network: android.net.Network,
+            linkProperties: android.net.LinkProperties,
+        ) {
+            if (isRunning) refreshDns()
+        }
+    }
+
+    private fun registerNetworkCallback() {
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        runCatching {
+            connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        }.onFailure { Log.w(TAG, "Could not register network callback", it) }
+    }
+
+    private fun unregisterNetworkCallback() {
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }
+    }
 
     private fun getSystemDnsServers(): List<InetAddress> {
         val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -113,12 +158,8 @@ class FirewallVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                // startForegroundService() gives the service about five seconds to post
-                // its notification. Post it before any database or tunnel work: on a
-                // cold start after an app update that work can outlast the window and
-                // the process is killed with ForegroundServiceDidNotStartInTimeException.
-                startForeground(NOTIFICATION_ID, createNotification())
-                startVpn()
+                val automatic = intent?.getBooleanExtra(EXTRA_AUTOMATIC, false) ?: false
+                if (enterForeground()) startVpn(retryOnEstablishFailure = automatic) else stopSelf()
             }
             ACTION_STOP -> handleStopRequest(
                 intent?.getBooleanExtra(EXTRA_PIN_VERIFIED, false) ?: false
@@ -127,13 +168,14 @@ class FirewallVpnService : VpnService() {
             ACTION_REFRESH_DNS -> refreshDns()
             null -> {
                 // Service was restarted by the system, check if we should be running.
-                // A sticky restart of a foreground service is expected to restore its
-                // notification promptly, so do that before reading preferences.
-                startForeground(NOTIFICATION_ID, createNotification())
+                if (!enterForeground()) {
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
                 serviceScope.launch {
                     if (settingsDataStore.isFirewallEnabled() && !isRunning) {
                         Log.d(TAG, "Service restarted by system, restarting VPN")
-                        startVpn()
+                        startVpn(retryOnEstablishFailure = true)
                     } else if (!settingsDataStore.isFirewallEnabled()) {
                         stopSelf()
                     }
@@ -141,6 +183,27 @@ class FirewallVpnService : VpnService() {
             }
         }
         return START_STICKY
+    }
+
+    /**
+     * Posts the ongoing notification before any database or tunnel work: a cold
+     * start after an app update can outlast the five-second window and the process
+     * is killed with ForegroundServiceDidNotStartInTimeException.
+     *
+     * Returns false when Android refuses foreground promotion
+     * (ForegroundServiceStartNotAllowedException — seen in production on Android 16
+     * when a START_STICKY redelivery arrives while the app is backgrounded). The
+     * caller must stop instead of letting the exception kill the process; the boot
+     * receiver or the next user toggle brings protection back.
+     */
+    private fun enterForeground(): Boolean {
+        return try {
+            startForeground(NOTIFICATION_ID, createNotification())
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Foreground promotion refused, stopping service", e)
+            false
+        }
     }
 
     /**
@@ -170,7 +233,7 @@ class FirewallVpnService : VpnService() {
         }
     }
 
-    private fun startVpn() {
+    private fun startVpn(retryOnEstablishFailure: Boolean = false) {
         if (isRunning) return
 
         serviceScope.launch {
@@ -211,6 +274,19 @@ class FirewallVpnService : VpnService() {
                     builder.setMetered(false)
                 }
 
+                // establish() returns null when consent is missing or revoked —
+                // including the boot-time window where the platform has not yet
+                // restored the app's VPN authorization. prepare() == null means
+                // consent is in place; a non-null intent means the user must
+                // re-consent, which no background retry can fix.
+                val consentIntent = prepare(this@FirewallVpnService)
+                if (consentIntent != null) {
+                    Log.w(TAG, "VPN consent required, cannot start automatically")
+                    settingsDataStore.setFirewallEnabled(false)
+                    stopSelf()
+                    return@launch
+                }
+
                 vpnInterface = builder.establish()
 
                 if (vpnInterface != null) {
@@ -219,6 +295,7 @@ class FirewallVpnService : VpnService() {
                     // foreground-service deadline is met before this slower setup.
                     settingsDataStore.setFirewallEnabled(true)
                     Log.d(TAG, "VPN established successfully")
+                    registerNetworkCallback()
 
                     // Check if lockdown mode is enabled and warn user
                     checkLockdownMode()
@@ -226,22 +303,31 @@ class FirewallVpnService : VpnService() {
                     runVpnLoop()
                 } else {
                     Log.e(TAG, "Failed to establish VPN")
-                    // Reached when consent was revoked or another VPN holds the slot.
-                    // Automatic starts (boot, update restore) arrive as
-                    // startForegroundService(), so leaving the service alive without
-                    // startForeground() would be killed for the missing notification.
+                    if (retryOnEstablishFailure) {
+                        // An automatic start (boot, update restore) can race the
+                        // system's VPN readiness and get null from establish().
+                        // One delayed retry recovers it; user-initiated starts do
+                        // not retry because a consent problem will not heal.
+                        delay(BOOT_RETRY_DELAY_MS)
+                        startVpn(retryOnEstablishFailure = false)
+                        return@launch
+                    }
+                    // The persisted flag must follow reality: leaving it true shows
+                    // "Firewall is enabled" while nothing is filtered.
+                    settingsDataStore.setFirewallEnabled(false)
                     stopSelf()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting VPN", e)
+                settingsDataStore.setFirewallEnabled(false)
                 stopSelf()
             }
         }
     }
 
     private suspend fun loadBlockedDomains(): Set<String> {
-        return blockedSiteDao.getEnabledSitesList()
-            .map { it.domain.lowercase().trimEnd('.') }
+        return blockedSiteDao.getEnabledDomains()
+            .map { it.lowercase().trimEnd('.') }
             .toSet()
     }
 
@@ -273,6 +359,13 @@ class FirewallVpnService : VpnService() {
                 }
             }
             Log.d(TAG, "VPN loop ended")
+            if (isRunning) {
+                // The tunnel died without a user stop (system revoked it, another
+                // VPN took the slot). Same rule as a failed establish: the UI must
+                // not claim protection that is no longer running.
+                settingsDataStore.setFirewallEnabled(false)
+                stopVpn()
+            }
         }
     }
 
@@ -550,6 +643,7 @@ class FirewallVpnService : VpnService() {
     private fun stopVpn() {
         Log.d(TAG, "Stopping VPN")
         isRunning = false
+        unregisterNetworkCallback()
         // Use runBlocking to ensure DataStore writes complete before stopping service
         runBlocking {
             settingsDataStore.setFirewallEnabled(false)
@@ -564,6 +658,7 @@ class FirewallVpnService : VpnService() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        unregisterNetworkCallback()
         serviceScope.cancel()
         vpnInterface?.close()
     }
@@ -680,9 +775,16 @@ class FirewallVpnService : VpnService() {
         serviceScope.launch {
             val systemDnsServers = getSystemDnsServers()
             dnsMutex.withLock {
-                upstreamOrder = UpstreamDns.candidates(
+                val override = getConfiguredDnsServer()
+                val fresh = UpstreamDns.candidates(
                     systemServers = systemDnsServers,
-                    override = getConfiguredDnsServer(),
+                    override = override,
+                    fallback = FALLBACK_DNS,
+                )
+                upstreamOrder = UpstreamDns.merge(
+                    fresh = fresh,
+                    current = upstreamOrder,
+                    override = override,
                     fallback = FALLBACK_DNS,
                 )
                 Log.d(TAG, "Upstream DNS candidates: $upstreamOrder")
@@ -697,12 +799,18 @@ class FirewallVpnService : VpnService() {
             return
         }
         serviceScope.launch {
-            val previousSize = blockedDomains.size
-            blockedDomains = loadBlockedDomains()
-            Log.d(TAG, "Refreshed blocklist: $previousSize -> ${blockedDomains.size} domains")
-            // Log some newly added domains for debugging
-            if (blockedDomains.size > previousSize) {
-                blockedDomains.take(5).forEach { Log.d(TAG, "  Sample domain: $it") }
+            try {
+                val previousSize = blockedDomains.size
+                blockedDomains = loadBlockedDomains()
+                Log.d(TAG, "Refreshed blocklist: $previousSize -> ${blockedDomains.size} domains")
+                // Log some newly added domains for debugging
+                if (blockedDomains.size > previousSize) {
+                    blockedDomains.take(5).forEach { Log.d(TAG, "  Sample domain: $it") }
+                }
+            } catch (e: Exception) {
+                // Keep the previous set rather than crash or filter with an empty
+                // list; the next refresh retries.
+                Log.e(TAG, "Blocklist refresh failed, keeping ${blockedDomains.size} domains", e)
             }
         }
     }

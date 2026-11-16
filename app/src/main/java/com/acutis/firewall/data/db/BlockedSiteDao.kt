@@ -13,8 +13,15 @@ interface BlockedSiteDao {
     @Query("SELECT * FROM blocked_sites WHERE isEnabled = 1")
     fun getEnabledSites(): Flow<List<BlockedSite>>
 
-    @Query("SELECT * FROM blocked_sites WHERE isEnabled = 1")
-    suspend fun getEnabledSitesList(): List<BlockedSite>
+    /**
+     * Domains only, for the VPN's in-memory filter. Reading whole entities loads
+     * seven columns per row for 120k+ rows through Room's cursor window; the wide
+     * read crashed in production (IllegalStateException in CursorWindow.getLong)
+     * while a download was rewriting the table. One narrow column keeps the
+     * window small and the read cheap.
+     */
+    @Query("SELECT domain FROM blocked_sites WHERE isEnabled = 1")
+    suspend fun getEnabledDomains(): List<String>
 
     @Query("SELECT * FROM blocked_sites WHERE category = :category")
     fun getSitesByCategory(category: BlockCategory): Flow<List<BlockedSite>>
@@ -51,6 +58,19 @@ interface BlockedSiteDao {
 
     @Query("DELETE FROM blocked_sites WHERE category = :category AND isCustom = 0")
     suspend fun deleteByCategory(category: BlockCategory)
+
+    /**
+     * Swaps a downloaded category in one transaction. Delete-then-insert as two
+     * statements left readers stepping through a cursor whose rows were being
+     * replaced underneath it — the production CursorWindow crash — and left the
+     * category empty if the insert failed. A transaction makes readers see either
+     * the old set or the new one, never a half-written table.
+     */
+    @Transaction
+    suspend fun replaceCategory(category: BlockCategory, sites: List<BlockedSite>) {
+        deleteByCategory(category)
+        sites.chunked(1000).forEach { batch -> insertAll(batch) }
+    }
 
     @Query("UPDATE blocked_sites SET isEnabled = :enabled WHERE category = :category")
     suspend fun setCategoryEnabled(category: BlockCategory, enabled: Boolean)

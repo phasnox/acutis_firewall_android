@@ -190,14 +190,27 @@ class HomeViewModel @Inject constructor(
         val context = application.applicationContext
         val intent = Intent(context, FirewallVpnService::class.java)
 
-        if (_uiState.value.isFirewallEnabled) {
-            intent.action = FirewallVpnService.ACTION_STOP
-            // Reaching here means the PIN was verified (or none is set).
-            intent.putExtra(FirewallVpnService.EXTRA_PIN_VERIFIED, true)
-            context.startService(intent)
-        } else {
-            intent.action = FirewallVpnService.ACTION_START
-            context.startForegroundService(intent)
+        try {
+            if (_uiState.value.isFirewallEnabled) {
+                intent.action = FirewallVpnService.ACTION_STOP
+                // Reaching here means the PIN was verified (or none is set).
+                intent.putExtra(FirewallVpnService.EXTRA_PIN_VERIFIED, true)
+                context.startService(intent)
+            } else {
+                intent.action = FirewallVpnService.ACTION_START
+                context.startForegroundService(intent)
+            }
+        } catch (e: Exception) {
+            // ForegroundServiceStartNotAllowedException / SecurityException on some
+            // OEM builds: surface the failure instead of crashing, and clear the
+            // spinner because no state change will arrive from the service.
+            _uiState.value = _uiState.value.copy(
+                isTogglingFirewall = false,
+                showUpdateResult = true,
+                updateResultTitle = "Could Not Start Firewall",
+                updateResultMessage = "Android refused to start the firewall service (${e.javaClass.simpleName}). Please try again.",
+                updateResultIsError = true
+            )
         }
     }
 

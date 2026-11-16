@@ -46,6 +46,26 @@ internal object UpstreamDns {
         return ordered.ifEmpty { listOf(fallback) }
     }
 
+    /**
+     * Combines a fresh resolver list with the one already in use. Network callbacks
+     * can fire while the platform momentarily reports no resolvers (boot, network
+     * switch); replacing a working list with the public fallback then strands DNS
+     * on a resolver the network may not route. New system servers go first, the
+     * previous ones stay behind them as a safety net, and the fallback is dropped
+     * as soon as any real server is known. An explicit user override always wins.
+     */
+    fun merge(
+        fresh: List<InetAddress>,
+        current: List<InetAddress>,
+        override: InetAddress?,
+        fallback: InetAddress,
+    ): List<InetAddress> {
+        if (override != null) return listOf(override)
+        val real = fresh.filter { it != fallback }
+        if (real.isEmpty()) return current.ifEmpty { listOf(fallback) }
+        return (real + current.filter { it != fallback && it !in real }).distinct()
+    }
+
     /** Moves [winner] to the front so later queries start with the address that works. */
     fun promote(order: List<InetAddress>, winner: InetAddress): List<InetAddress> =
         buildList(order.size.coerceAtLeast(1)) {

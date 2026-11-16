@@ -3,6 +3,7 @@ package com.acutis.firewall.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.acutis.firewall.data.preferences.SettingsDataStore
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -43,8 +44,17 @@ class BootReceiver : BroadcastReceiver() {
             if (shouldRestoreVpn(afterUpdate, autoStart, wasEnabled)) {
                 val vpnIntent = Intent(context, FirewallVpnService::class.java).apply {
                     action = FirewallVpnService.ACTION_START
+                    putExtra(FirewallVpnService.EXTRA_AUTOMATIC, true)
                 }
-                context.startForegroundService(vpnIntent)
+                try {
+                    context.startForegroundService(vpnIntent)
+                } catch (e: Exception) {
+                    // Android 12+ refuses background foreground-service starts on
+                    // some OEM builds even inside the boot/update exemption window.
+                    // Crashing the receiver helps nobody; the user's next toggle
+                    // starts protection.
+                    Log.w("BootReceiver", "Could not start firewall service", e)
+                }
             }
         }
     }

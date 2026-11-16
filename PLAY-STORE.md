@@ -10,19 +10,20 @@ credentials are provided.
 | Item | Value |
 |------|-------|
 | Package | `com.acutis.firewall` |
-| Version name | `1.0.12` |
-| Version code | `10012` |
+| Version name | `1.0.13` |
+| Version code | `10013` |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 (Android 16) — required for new apps since 31 Aug 2026 |
-| Artifact | `app/build/outputs/bundle/release/app-release.aab`; CI publishes the signed `v1.0.12` assets on the GitHub release and uploads the AAB to the internal testing track. Copy the AAB to `play-store/acutis-firewall-1.0.12-signed.aab` if keeping a local copy. |
+| Artifact | `app/build/outputs/bundle/release/app-release.aab`; CI publishes the signed `v1.0.13` assets on the GitHub release and uploads the AAB to the internal testing track. Copy the AAB to `play-store/acutis-firewall-1.0.13-signed.aab` if keeping a local copy. |
 
-Play accepts only the AAB, never an APK. Never reuse a version code: build `10013`
+Play accepts only the AAB, never an APK. Never reuse a version code: build `10014`
 for the next upload even if only the listing text changes.
 
 Live tracks (checked 16 Nov 2026): production had been serving `10009 (1.0.9)`.
 `10011 (1.0.11)` went to internal testing and was superseded by `10012`, which fixes
 two defects found on a clean install (section 7). `v1.0.12` was tagged, CI published
-it, and production runs `10012 (1.0.12)` as a 20% staged rollout.
+it, and production ran `10012 (1.0.12)` as a 20% staged rollout. `10013` fixes the two
+production crash clusters Android vitals reported on `10009` (section 8).
 
 ## 2. Release automation
 
@@ -251,3 +252,42 @@ that answers. A unit test covers the ordering rule.
 
 Lesson for the checklist: "Firewall is enabled" in the UI only proves the tunnel
 exists. Always resolve a domain with the firewall on.
+
+## 8. The two production crash clusters (fixed in 1.0.13)
+
+Android vitals on `10009 (1.0.9)` showed exactly two crash signatures:
+
+1. `ForegroundServiceStartNotAllowedException` at
+   `FirewallVpnService.onStartCommand` — 8 events, 2 users, Android 16, vivo and
+   Samsung. A `START_STICKY` redelivery arrived while the app was backgrounded and
+   `startForeground()` was refused, killing the process.
+2. `IllegalStateException` at `CursorWindow.nativeGetLong` inside
+   `BlockedSiteDao_Impl.getEnabledSitesList` — 2 events, 2 users, Android 15/16.
+   The VPN read all seven columns of 120k+ rows through Room's cursor window
+   while a blocklist download was deleting and reinserting the same table.
+
+Fixes in 1.0.13:
+
+- `enterForeground()` catches the refusal and stops the service instead of
+  crashing; the boot receiver and the UI toggle also guard their
+  `startForegroundService()` calls, and the UI surfaces a "Could Not Start
+  Firewall" dialog rather than spinning forever.
+- The VPN loads `SELECT domain …` (`getEnabledDomains()`), one narrow column
+  instead of whole entities, and category downloads swap rows inside a single
+  `@Transaction replaceCategory()` so readers never step through a half-written
+  table. A failed refresh keeps the previous in-memory set.
+- While verifying on the emulator, two more state-truth bugs surfaced and are
+  fixed the same way: a failed `establish()` left `firewallEnabled = true` (UI
+  claimed protection that was not running), and a boot restore could establish
+  the tunnel before the network had routes, leaving DNS dead with no recovery.
+  The service now clears the flag on any failed start, checks `VpnService.prepare()`
+  before establishing, retries an automatic start once after 5 s, watches the
+  default network to refresh resolvers when it comes up, and merges resolver
+  lists so a transient empty report never replaces working servers with the
+  public fallback.
+
+Verified on a clean Android 15 emulator: fresh install → permission prompt →
+blocklist download → enable → block/allow resolution; in-place update restores
+protection; reboot restores protection with DNS working; blocklist refresh while
+the VPN runs keeps filtering alive. Unit tests: 238 green, including the
+foreground-refusal, transactional-replace, and resolver-merge regressions.

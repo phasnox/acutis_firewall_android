@@ -59,7 +59,7 @@ class BlocklistDownloader @Inject constructor(
         category: BlockCategory,
         urls: List<String> = getUrlsForCategory(category)
     ): DownloadResult = withContext(Dispatchers.IO) {
-        var totalAdded = 0
+        val totalAdded: Int
         val allDomains = mutableSetOf<String>()
         var urlsSucceeded = 0
         val failures = mutableListOf<String>()
@@ -89,8 +89,6 @@ class BlocklistDownloader @Inject constructor(
         }
 
         try {
-            blockedSiteDao.deleteByCategory(category)
-
             val sites = allDomains.map { domain ->
                 BlockedSite(
                     domain = domain,
@@ -100,10 +98,8 @@ class BlocklistDownloader @Inject constructor(
                 )
             }
 
-            sites.chunked(1000).forEach { batch ->
-                blockedSiteDao.insertAll(batch)
-                totalAdded += batch.size
-            }
+            blockedSiteDao.replaceCategory(category, sites)
+            totalAdded = sites.size
 
             Log.d(TAG, "Saved $totalAdded domains for category $category")
             notifyBlocklistChanged()
@@ -118,7 +114,7 @@ class BlocklistDownloader @Inject constructor(
             Log.e(TAG, "Error saving blocklist", e)
             DownloadResult(
                 success = false,
-                domainsAdded = totalAdded,
+                domainsAdded = 0,
                 urlsAttempted = urls.size,
                 urlsSucceeded = urlsSucceeded,
                 error = e.message

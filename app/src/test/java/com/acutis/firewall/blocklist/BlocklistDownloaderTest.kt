@@ -44,8 +44,7 @@ class BlocklistDownloaderTest {
 
     @Test
     fun `happy path saves parsed domains and reports success`() = runTest {
-        coEvery { dao.deleteByCategory(BlockCategory.ADULT) } just Runs
-        coEvery { dao.insertAll(any()) } just Runs
+        coEvery { dao.replaceCategory(BlockCategory.ADULT, any()) } just Runs
         val url = "https://example.test/hosts"
         val fetcher = linesFetcher(
             mapOf(
@@ -65,9 +64,8 @@ class BlocklistDownloaderTest {
         assertThat(result.domainsAdded).isEqualTo(2)
         assertThat(result.urlsSucceeded).isEqualTo(1)
         assertThat(result.urlsAttempted).isEqualTo(1)
-        coVerify { dao.deleteByCategory(BlockCategory.ADULT) }
         coVerify {
-            dao.insertAll(withArg<List<BlockedSite>> { sites ->
+            dao.replaceCategory(BlockCategory.ADULT, withArg<List<BlockedSite>> { sites ->
                 assertThat(sites.map { it.domain })
                     .containsExactly("adult-one.example", "adult-two.example")
             })
@@ -91,8 +89,7 @@ class BlocklistDownloaderTest {
         assertThat(result.urlsSucceeded).isEqualTo(0)
         assertThat(result.error).contains("SSLHandshakeException")
         // Critical: do not wipe the existing category when every source failed.
-        coVerify(exactly = 0) { dao.deleteByCategory(any()) }
-        coVerify(exactly = 0) { dao.insertAll(any()) }
+        coVerify(exactly = 0) { dao.replaceCategory(any(), any()) }
     }
 
     @Test
@@ -105,13 +102,12 @@ class BlocklistDownloaderTest {
 
         assertThat(result.success).isFalse()
         assertThat(result.error).contains("HTTP 500")
-        coVerify(exactly = 0) { dao.deleteByCategory(any()) }
+        coVerify(exactly = 0) { dao.replaceCategory(any(), any()) }
     }
 
     @Test
     fun `partial failure still saves what succeeded`() = runTest {
-        coEvery { dao.deleteByCategory(BlockCategory.SOCIAL_MEDIA) } just Runs
-        coEvery { dao.insertAll(any()) } just Runs
+        coEvery { dao.replaceCategory(BlockCategory.SOCIAL_MEDIA, any()) } just Runs
         val goodUrl = "https://good.test/hosts"
         val badUrl = "https://bad.test/hosts"
         val fetcher = object : HttpFetcher {
@@ -131,5 +127,20 @@ class BlocklistDownloaderTest {
         assertThat(result.domainsAdded).isEqualTo(1)
         assertThat(result.urlsSucceeded).isEqualTo(1)
         assertThat(result.urlsAttempted).isEqualTo(2)
+    }
+
+    @Test
+    fun `a failed save reports failure and adds nothing`() = runTest {
+        coEvery { dao.replaceCategory(BlockCategory.MALWARE, any()) } throws
+            IllegalStateException("Couldn't read row from CursorWindow")
+        val url = "https://example.test/hosts"
+        val fetcher = linesFetcher(mapOf(url to listOf("0.0.0.0 bad-one.example")))
+
+        val result = downloader(fetcher)
+            .downloadAndSaveBlocklist(BlockCategory.MALWARE, urls = listOf(url))
+
+        assertThat(result.success).isFalse()
+        assertThat(result.domainsAdded).isEqualTo(0)
+        assertThat(result.error).contains("CursorWindow")
     }
 }

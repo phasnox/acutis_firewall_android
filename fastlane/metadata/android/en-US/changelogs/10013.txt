@@ -1,0 +1,3 @@
+• Fix: a crash when Android refused to restart the firewall in the background
+• Fix: a crash while reloading blocklists during a download
+• Faster blocklist loading: the filter reads only domains, not full rows

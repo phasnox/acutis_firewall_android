@@ -76,4 +76,49 @@ class UpstreamDnsTest {
 
         assertThat(promoted).containsExactly(working, dead).inOrder()
     }
+
+    @Test
+    fun `an empty refresh keeps the working servers instead of the fallback`() {
+        // Boot/network-switch callbacks fire while the platform reports no
+        // resolvers; dropping to 1.1.1.1 stranded DNS on an unrouted resolver.
+        val working = InetAddress.getByName("10.0.2.3")
+
+        val merged = UpstreamDns.merge(
+            fresh = listOf(fallback),
+            current = listOf(working),
+            override = null,
+            fallback = fallback,
+        )
+
+        assertThat(merged).containsExactly(working)
+    }
+
+    @Test
+    fun `new system servers lead and old ones remain as backup`() {
+        val old = InetAddress.getByName("10.0.2.3")
+        val new = InetAddress.getByName("192.168.1.1")
+
+        val merged = UpstreamDns.merge(
+            fresh = listOf(new),
+            current = listOf(old),
+            override = null,
+            fallback = fallback,
+        )
+
+        assertThat(merged).containsExactly(new, old).inOrder()
+    }
+
+    @Test
+    fun `a user override replaces everything on refresh`() {
+        val override = InetAddress.getByName("9.9.9.9")
+
+        val merged = UpstreamDns.merge(
+            fresh = listOf(override),
+            current = listOf(InetAddress.getByName("10.0.2.3")),
+            override = override,
+            fallback = fallback,
+        )
+
+        assertThat(merged).containsExactly(override)
+    }
 }

@@ -2,7 +2,6 @@ package com.acutis.firewall.data.repository
 
 import android.content.Context
 import android.content.Intent
-import com.acutis.firewall.blocklist.DefaultBlocklists
 import com.acutis.firewall.data.db.BlockedSiteDao
 import com.acutis.firewall.data.db.entities.BlockCategory
 import com.acutis.firewall.data.db.entities.BlockedSite
@@ -72,30 +71,6 @@ class BlocklistRepository @Inject constructor(
 
     suspend fun isDomainBlocked(domain: String): Boolean {
         return blockedSiteDao.isDomainBlocked(normalizeDomain(domain))
-    }
-
-    suspend fun initializeDefaultBlocklists() {
-        val existingSites = blockedSiteDao.getEnabledSitesList()
-        if (existingSites.isEmpty()) {
-            val defaults = DefaultBlocklists.getAllDefaultDomains()
-            blockedSiteDao.insertAll(defaults)
-            notifyBlocklistChanged()
-        }
-    }
-
-    suspend fun resetCategory(category: BlockCategory) {
-        blockedSiteDao.deleteByCategory(category)
-        val defaults = when (category) {
-            BlockCategory.ADULT -> DefaultBlocklists.getAdultContentDomains()
-            BlockCategory.MALWARE -> DefaultBlocklists.getMalwareDomains()
-            BlockCategory.GAMBLING -> DefaultBlocklists.getGamblingDomains()
-            BlockCategory.SOCIAL_MEDIA -> DefaultBlocklists.getSocialMediaDomains()
-            BlockCategory.CUSTOM -> emptyList()
-        }
-        if (defaults.isNotEmpty()) {
-            blockedSiteDao.insertAll(defaults)
-        }
-        notifyBlocklistChanged()
     }
 
     private fun normalizeDomain(domain: String): String {

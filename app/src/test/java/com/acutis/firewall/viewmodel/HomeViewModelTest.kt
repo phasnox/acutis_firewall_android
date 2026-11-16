@@ -785,4 +785,30 @@ class HomeViewModelTest {
 
         coVerify(exactly = 0) { settingsDataStore.setUninstallProtectionRemoved(true) }
     }
+
+    @Test
+    fun `a refused foreground-service start surfaces an error instead of crashing`() = runTest {
+        // Production crash: ForegroundServiceStartNotAllowedException from
+        // startForegroundService on Android 16 OEM builds. The toggle must not
+        // take the process down, and the spinner must clear because no service
+        // state change will arrive.
+        every { application.applicationContext } returns mockk(relaxed = true) {
+            every { startForegroundService(any()) } throws
+                IllegalStateException("Not allowed to start service Intent: app is in background")
+        }
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onToggleFirewall()
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertThat(state.isTogglingFirewall).isFalse()
+            assertThat(state.showUpdateResult).isTrue()
+            assertThat(state.updateResultIsError).isTrue()
+            assertThat(state.updateResultTitle).isEqualTo("Could Not Start Firewall")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
